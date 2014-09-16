@@ -15,6 +15,6 @@ baseball <- data.frame("H" = x, "RBI"= y, "BB" = z)
 dfNA <- function(df)
 {NAvector = NULL #Navector will return the vector of named NA counts
  for (i in 1:ncol(df)){ #using ncol(df) allows us to run the loop until the n'th column
-   NAvector[colnames(df)[i]] <- testna(df[i])}
+   NAvector[colnames(df)[i]] = testna(baseball[i])}
  return(NAvector)}
 dfNA(baseball)
