@@ -26,3 +26,15 @@ voteTotal <- sum(soupVoteTidy$Votes)
 mutate(soupVoteTidy,
        Percentage = round((Votes/voteTotal)*100, digits = 2))
  # Answer to Question 2
+ # The aggregate() function will allow us to designate the variables of interest
+ # and apply a sum function on the vote totals
+aggregate(Votes ~ Outcome + City, soupVoteTidy, sum)
+ # Answer to Question 3
+ # The most important question- who won the vote?
+aggregate(Votes ~ Outcome, soupVoteTidy, sum)
+ # After completing the exercises, I would have chosen the same questions, but I may
+ # have approached the solutions differently, perhaps to create functions that simply returned
+ # a specific "Yes/No/Numerical response to a question. On the other hand, many of these
+ # questions benefit from resized datasets, focused simply on the variables of interest. 
+ # I found questions 2 and 3 easy to answer with the aggregate function.
+ # I might have structured the dataframe differently, as the "tidying" was the most challenging!
