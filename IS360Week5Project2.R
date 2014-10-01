@@ -13,9 +13,16 @@ soupVote <- data.frame("Outcome" = c, "Edin.U24" = d, "Edin.O25" = e, "Glas.U24"
 #3
 require(tidyr)
 require(dplyr)
-soupVote %>%
-  gather(Demo, Votes, Edin.U24:Glas.O25) %>%  #Here I consolidated the 
-  # data into a "Demo" column for city/age and another for the vote count
-  separate(Demo, into = c("City", "Demo"), sep = "\\.") 
+soupVoteTidy <- soupVote %>%
+  gather(Demo, Votes, Edin.U24:Glas.O25) %>%  
+  # Here I consolidated the dataframe into a "Demo" column for city/age and another for the vote count
+  separate(Demo, into = c("City", "Demo"), sep = "\\.") %>%
   # the separate function will split the age/city data into two columns 
-
+  group_by(Outcome, Demo)
+soupVoteTidy
+#4
+ # Answer to Question 1
+voteTotal <- sum(soupVoteTidy$Votes)
+mutate(soupVoteTidy,
+       Percentage = round((Votes/voteTotal)*100, digits = 2))
+ # Answer to Question 2
