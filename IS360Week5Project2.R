@@ -2,15 +2,20 @@
 # (2) What was the outcome in each of the councils (Glasgow and Edinburgh)?
 # (3) Who won?! (Based on total number of votes)
 # 2.
-c <- c("Yes", "No")
+c <- c("Yes", "No")  #I made 5 columns that each held two variables
 d <- c(80100, 35900)
 e <- c(143000, 214800)
 f <- c(99400, 43000)
 g <- c(150400, 207000)
-soupVote <- data.frame("Outcome" = c, "EdinU24" = d, "EdinO25" = e, "GlasU24" = f, "GlasO25" = g)
+soupVote <- data.frame("Outcome" = c, "Edin.U24" = d, "Edin.O25" = e, "Glas.U24" = f, "Glas.O25" = g)
+#In the dataframe, I coded 16-24 as "U24" and 25+ as "O25"
+#By doing so, I was able to integrate the umbrella (city) info in the age data
 #3
 require(tidyr)
 require(dplyr)
 soupVote %>%
-  gather(Demo, Votes, EdinU24:GlasO25) %>%
+  gather(Demo, Votes, Edin.U24:Glas.O25) %>%  #Here I consolidated the 
+  # data into a "Demo" column for city/age and another for the vote count
+  separate(Demo, into = c("City", "Demo"), sep = "\\.") 
+  # the separate function will split the age/city data into two columns 
 
