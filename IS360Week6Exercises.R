@@ -18,8 +18,11 @@ sum(Bundestag)
 # From above URL, dataset is "Ergebnis der Wahl zum 16. Deutschen Bundestag am 18. September 2005 nach Wahlkreisen.csv"
 NPD <-  c(17497, 32944,	10135, 62313, 5513, 51389, 40324,	33508, 97166,	131718, 51499, 57464, 36481, 126059, 92847,	10920)
 Bundestag["NPD"] <- NPD
-SPD <- Bundestag$SPD
-SPD*100/colSums(Bundestag)["SPD"]
-for (i in ncol(Bundestag)){
-  Bundestag[i] <- Bundestag[colnames(Bundestag)[i]]
-  Bundestag <- Bundestag[i]*100/colSums(Bundestag)[i]}
+require(plyr)
+percentVote <- function(x) x*100/sum(x)
+bundestagByLand <- as.data.frame(t(Bundestag))
+voteByLandPct <- colwise(percentVote)(bundestagByLand)
+hist(as.matrix(voteByLandPct), freq=FALSE, xlab="% Vote by Region", 
+     main = "Histogram of Percent Vote in a Region",
+     abline(v=5, col=2))
+require(ggplot2)
