@@ -22,7 +22,12 @@ require(plyr)
 percentVote <- function(x) x*100/sum(x)
 bundestagByLand <- as.data.frame(t(Bundestag))
 voteByLandPct <- colwise(percentVote)(bundestagByLand)
-hist(as.matrix(voteByLandPct), freq=FALSE, xlab="% Vote by Region", 
-     main = "Histogram of Percent Vote in a Region",
-     abline(v=5, col=2))
+Partei <- c("SPD", "CDU.CSU", "Gruene", "FDP", "Linke", "NPD")
+rownames(voteByLandPct) <- Partei
 require(ggplot2)
+voteByLandPct["Partei"] <- Partei
+voteByLandPct.melt <- melt(voteByLandPct, id.vars='Partei')
+qplot(x=voteByLandPct.melt$value, geom="histogram", binwidth=5,freq=FALSE, xlab="% Vote by Region", 
+      ylab = "density", main = "Histogram of Percent Vote in a Region")
+
+
