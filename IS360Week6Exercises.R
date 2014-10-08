@@ -1,4 +1,5 @@
-Bundestag <- read.csv("Bundestag2005.csv", header=TRUE)
+# I will explore the dataset "Votes in German Bundestag Election 2005" 
+Bundestag <- read.csv("http://vincentarelbundock.github.io/Rdatasets/csv/vcd/Bundestag2005.csv", header=TRUE)
 Lander <- Bundestag$X  #Modify the dataframe to remove column of names and reattach as rownames
 Bundestag <- Bundestag[2:6]
 rownames(Bundestag) <- Lander
