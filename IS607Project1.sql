@@ -2,14 +2,6 @@
 
 -- DROP DATABASE "Enrollments";
 
-CREATE DATABASE "Enrollments"
-  WITH OWNER = postgres
-       ENCODING = 'UTF8'
-       TABLESPACE = pg_default
-       LC_COLLATE = 'C'
-       LC_CTYPE = 'C'
-       CONNECTION LIMIT = -1;
-
 -- This database is drawn from my work experience - it demonstrates student enrollment in various study abroad programs. There are programs in a variety of locations, in the UK
 -- France, and Spain. Each program offers multiple courses and some courses are offered on multiple programs. Students may only enroll in one course one on program.
 -- This database will include information on enrollment status (in the Students table), course offerings and course availability (each in their own tables), and total student capacity
@@ -17,14 +9,14 @@ CREATE DATABASE "Enrollments"
 
 -- The Students Table will include all students that applied, whether or not they were admitted. Students who haven't been accepted will not be enrolled in a course.
 
-DROP TABLE IF EXISTS Students;
+DROP TABLE IF EXISTS Students CASCADE;
 
 CREATE TABLE Students
 (
   studentID serial PRIMARY KEY, 
   firstname varchar (30) NOT NULL,
   surname varchar (30) NOT NULL,
-  programID int NOT NULL,
+  programID int NOT NULL references Programs(programID),
   accepted boolean,
   enrolledCourse int NULL,
   backUpCourse int NULL
@@ -42,7 +34,7 @@ VALUES
 
 SELECT * FROM Students;
 
-DROP TABLE IF EXISTS Programs;
+DROP TABLE IF EXISTS Programs CASCADE;
 
 CREATE TABLE Programs
 (
@@ -63,13 +55,13 @@ VALUES
 
 SELECT * FROM Programs;
 
-DROP TABLE IF EXISTS Courses;
+DROP TABLE IF EXISTS Courses CASCADE;
 
 CREATE TABLE Courses
 (
   courseID serial PRIMARY KEY, 
   name varchar (30) NOT NULL,
-  programID int NULL,
+  programID int NULL references Programs(programID),
   capacity int NULL
 );
 
@@ -96,11 +88,11 @@ VALUES
 
 SELECT * FROM Courses;
 
-DROP TABLE IF EXISTS CourseAvailability;
+DROP TABLE IF EXISTS CourseAvailability CASCADE;
 
 CREATE TABLE CourseAvailability
 (
-  courseID serial PRIMARY KEY, 
+  courseID serial PRIMARY KEY references Courses(courseID), 
   studentsEnrolled int NOT NULL
 );
 
