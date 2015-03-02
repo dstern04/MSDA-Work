@@ -16,7 +16,7 @@ CREATE TABLE Students
   studentID serial PRIMARY KEY, 
   firstname varchar (30) NOT NULL,
   surname varchar (30) NOT NULL,
-  programID int NOT NULL references Programs(programID),
+  programID int NOT NULL REFERENCES Programs(programID),
   accepted boolean,
   enrolledCourse int NULL,
   backUpCourse int NULL
@@ -61,7 +61,7 @@ CREATE TABLE Courses
 (
   courseID serial PRIMARY KEY, 
   name varchar (30) NOT NULL,
-  programID int NULL references Programs(programID),
+  programID int NULL REFERENCES Programs(programID),
   capacity int NULL
 );
 
@@ -92,7 +92,7 @@ DROP TABLE IF EXISTS CourseAvailability CASCADE;
 
 CREATE TABLE CourseAvailability
 (
-  courseID serial PRIMARY KEY references Courses(courseID), 
+  courseID serial PRIMARY KEY REFERENCES Courses(courseID), 
   studentsEnrolled int NOT NULL
 );
 
