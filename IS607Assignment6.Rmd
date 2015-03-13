@@ -1,0 +1,56 @@
+---
+title: "IS 607 Assignment 6 - David Stern"
+output: html_document
+---
+
+For this excercise, I will look at the Motor Trend Car Road Tests (mtcars) dataset. The data includes 32 observtions of 11 variables, many of which are continuous (mpg, displacement, 1/4 mile time) and some of which are categorial (transmission, number of forward gears, and number of cylinders). 
+
+```{r}
+head(mtcars)
+```
+
+```{r}
+str(mtcars)
+```
+
+Here we see that all of the data is numeric. Since we know that the number of gears (gear), transmission type (am), number of cyliners (cyl) and number of carburetors (carb) take on a very small number of distinct values, we can convert these columns to factors to treat each numerical value as a category (e.g. 2 cylinder cars vs. 4 cylinder cars).
+
+```{r}
+mtcars$am <- as.factor(mtcars$am)
+mtcars$cyl <- as.factor(mtcars$cyl)
+mtcars$gear <- as.factor(mtcars$gear)
+mtcars$carb <- as.factor(mtcars$carb)
+```
+
+We can look at the summary statistics for each of the variables using R's built-in summary function. For the categorical variables, the summary function will return a count for each level of the factors. For transmission, we see that there are 19 for "0" (automatic transmission) and 13 for "1" (manual transmission).
+
+```{r}
+summary(mtcars)
+```
+
+If we just wanted to find the frequency of a categorical variable, we could run a table on just that column:
+
+```{r}
+table(mtcars$gear)
+```
+
+If we wanted to see how the number of gears varies by transmission type, we can run a table on two categorical variables. This will demonstrate that within our dataset, cars with automatic transmissions tend to have fewer gears.
+
+```{r}
+table(mtcars$am, mtcars$gear)
+```
+
+```{r}
+boxplot(mtcars$mpg,main="MPG distribution in MTCARS data", ylab="MPG")
+```
+
+The boxplot shows the data shown above in the summary function. The median is about 19 mpg, the minimum 10, the maximum 34, and fifty-percent - shown as the floor and ceiling of the box - between 15-23 mpg.
+
+This next scatterplot shows the relationship between two numeric variables - mpg and hp. When we think about automative design, our intuition might tell us that fuel efficiency is inversely related to horsepower. The following graph demonstrates that this is a reasonable asumption.
+
+```{r}
+plot(mtcars$mpg ~ mtcars$hp, main= "HP vs. MPG", xlab="Horsepower",ylab="Miles/Gallon")
+abline(lm(mtcars$mpg~mtcars$hp), col="red") # Add the regression line
+```
+
+

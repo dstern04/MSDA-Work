@@ -1,0 +1,60 @@
+---
+title: "David Stern IS 606 Assignment 6"
+output: html_document
+---
+
+The following exercise will create two R functions: 
+
+allProbs - This function will take a file as input and return the probabilities of each word in the document.
+
+detectTwo - This function will take a file and two words as input. It will return a matrix of the distinct probability of the occurence of each word as well as the adjacency of the two - the probability that the two words occur together, in either order.
+
+
+```{r,tidy=TRUE}
+allProbs <- function(x){
+  text <- scan(x, character(0),quote=NULL)
+  output <- tolower(gsub("[^[:alnum:][:space:]]", "", text))
+  return(table(output)/length(output))
+}
+```
+Now we can run the function by specifying the text file:
+
+```{r}
+P <- allProbs("/Users/davidstern/assign6.sample.txt")
+head(P,100)
+```
+
+Let's make sure all the probabilities add up to 1:
+
+```{r}
+sum(allProbs("assign6.sample.txt"))
+```
+
+The following function will take a document and two words as input and return the probability of each of the words alone, as well as "adjacency" - the probability of them occuring together.
+
+```{r,tidy=TRUE}
+detectTwo <- function(doc,word1,word2){
+  text <- scan(doc, character(0),quote=NULL) # Splits text into words
+  output <- tolower(gsub("[^[:alnum:][:space:]]", "", text)) 
+  #  ^ Removes punctuation and keeps alphanumeric characters and spaces
+  totals <- table(output)/length(output) # stores probabilities of each word
+  word1 <- as.character(word1) # converts word1/word2 inputs to character types
+  word2 <- as.character(word2)
+  count <- 0
+  for(i in 1:length(text)){
+    if (output[i] == word1 && (output[i-1] == word2 || output[i+1] == word2))
+    { # This will count every instance where word2 precedes OR follows word1
+      count <- count + 1
+    }
+  } # Now we will print our results in a tidy matrix
+  results <- as.matrix(c(totals[word1],totals[word2],count/length(text)),byrow=TRUE)
+  rownames(results) <- c(word1,word2,"adjacency")
+  print(t(results))
+}
+```
+
+Let's test the function with "the" and "for":
+
+```{r}
+detectTwo("/Users/davidstern/assign6.sample.txt","the","for")
+```
