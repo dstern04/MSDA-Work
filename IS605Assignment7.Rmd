@@ -1,10 +1,16 @@
 ---
 title: "IS605Assignment7"
+author: David Stern
 output: html_document
 ---
-To calculate the Expected Value of X, based on a set of values and their probability distribution, we will build
-a function that takes in a dataframe, that should contain the values and the respective probabilities.
+
+Problem Set 1
+===============================
+
+To calculate the Expected Value of X based on a discrete probability distribution, we will build a function that takes in a dataframe that should contain the values and their respective probabilities.
 We should construct any input as a two-column data frame. 
+
+\[E[X] = \sum_{i=1}^n x_{i}P(X = x_{i})\]
 
 First, let's construct a function that sums the all of the outcomes by their respective probabilities:
 
@@ -24,38 +30,15 @@ And to calculate the standard deviation of a probability distribution:
 SDofX <- function(df){
   var <- 0
   for (i in 1:nrow(df)){
-    var <- var + ((df[i,1]-EofX(df))^2)*df[i,2]
-    sd <- sqrt(var)
-  }
-  print(sd)
+    var <- var + (df[i,1]^2)*df[i,2]
+    }
+  var <- var - EofX(df)^2
+  var <- sqrt(var)
+  return(var)
 }
 ```
 
-We can build a function that will give us the standard deviation of a set of random variables. Note that this formula TYPE IN LATEX, will give us the population standard deviation
-
-```{r}
-SDpop <- function(x){
-  print(sqrt(mean(x^2) - mean(x)^2))
-}
-SDofX(1:10)
-```
-
-Our result differs slightly from the built-in function in R, which will return the sample standard deviation.
-
-```{r}
-sd(1:10)
-```
-
-We can construct a function to calculate sample standard deviation:
-
-```{r}
-SDsample <- function(x){
-  print(sqrt((mean(x^2) - mean(x)^2)/(length(x)-1)))
-}
-SDsample(1:10)
-```
-
-Now we can test the function with a carefully constructed probability distribution. We must make sure that 
+Now we can test the functions with a carefully constructed probability distribution. We must make sure that 
 (1) each output has a corresponding probability and (2) all of the probabilities add up to 1.
 
 ```{r}
@@ -65,6 +48,23 @@ length(outcomes) == length(values) # Check that they are the same length
 sum(values) # Check that they add up to one
 probDist <- as.data.frame(cbind(outcomes,values))
 probDist
+EofX(probDist)
+SDofX(probDist)
+```
+
+We can also build a simple function that will give us the standard deviation of a set of random variables. Note that this formula will give us the $\textit{population}$ standard deviation.
+
+```{r}
+SDpop <- function(x){
+  sqrt(mean(x^2) - mean(x)^2)
+}
+SDpop(1:10)
+```
+
+Our result differs slightly from the built-in function in R, which will return the $\textit{sample}$ standard deviation.
+
+```{r}
+sd(1:10)
 ```
 
 Now we will build a function that will preserve a rolling estimate of mean and standard deviation:
@@ -73,17 +73,18 @@ Now we will build a function that will preserve a rolling estimate of mean and s
 stored <- vector(mode="numeric", length=0) #initialize the vector of stored values
 stats <- function(x){
   stored <<- c(stored,x) # here we use the <<- "superassignment" operator to store in the parent environment
-    return(list(ExpectedValue = mean(stored),StandardDeviation = sd(stored)))
+    return(list(ExpectedValue = mean(stored),StandardDeviation = sd(stored),CurrentData=stored))
 }
-# Now we can test it
-g <- 3:5
-h <- 4:6
-i <- 10:31
-stats(g) 
-stats(g) # We can see that running the same vector of values preserves the mean and alters the st. deviation
-stats(g)
-stats(h)
-stats(i)
+```
+
+Now we can test it:
+
+```{r}
+stats(3:5) 
+stats(3:5) # We can see that running the same vector of values preserves the mean and alters the st. deviation
+stats(3:5)
+stats(4:6)
+stats(10:31)
 ```
 
 If we want to get the current mean or standard deviation without adding new data, we can simply call them from the "stored" data with the base R functions
@@ -99,7 +100,15 @@ And if we want to clear the previous data and start the function anew:
 rm(stored) # Clears previous data
 ```
 
-Let's set some random variables 
+
+Problem Set 2
+===============================
+
+Now we will construct functions that calculate the correlation and covariance of two variables as a function 
+of mean and standard deviation.
+
+\[Cov(X,Y) = E[XY] - E[X][Y]\]
+\[Corr(X,Y) = \frac{Cov(X,Y)}{SD[X]SD[Y]}\]
 
 ```{r}
 g <- sample(40)
@@ -110,12 +119,10 @@ covariance <- function(x,y){
 correlation <-function(x,y){
   (mean(x*y) - mean(x)*mean(y))/(sd(x)*sd(y))
 }
-# See if they're close to the built-in functions
-covariance(g,h)
-cov(g,h) # built-in
-correlation(g,h)
-cor(g,h) # built-in
 ```
+
+Here we will load in the auto-mpg.data file so that we can calculate the correlation and covariance of the 
+five variables.
 
 ```{r}
 setwd("/Users/davidstern/Documents")
@@ -124,6 +131,9 @@ data <- as.matrix(data)
 fiveVars <- matrix(data[,1:5],ncol=5)
 colnames(fiveVars) <- c("displacement","horsepower","weight","acceleration","mpg")
 ```
+
+Correlation Matrix
+------------------
 
 ```{r}
 corrMatrix <- matrix(rep(0,25),ncol=5)
@@ -147,7 +157,8 @@ cor(fiveVars[,1:5])
 Our correlation matrix seems quite accurate, although all of the values on the diagonals should be exactly 1.
 The values seem to only be less than three-thousandths of one point off.
 
-Now we will build our covariance matrix.
+Covariance matrix
+-----------------
 
 ```{r}
 covMatrix <- matrix(rep(0,25),ncol=5)
@@ -161,11 +172,15 @@ for (i in 1:ncol(covMatrix)) {
 covMatrix
 ```
 
-It appears that this covariance matrix does past the symmetry test. For each entry Mi,j
- covMatrix[i,j] == covMatrix[j,i]
-
 We can test this against a correlation matrix constructed with the built-in function:
 
 ```{r}
 cov(fiveVars[,1:5])
 ```
+
+It appears that this covariance matrix does pass the symmetry test. For each entry $M_{ij}=M_{ji}$.
+
+```{r}
+covMatrix[i,j] == covMatrix[j,i]
+```
+
