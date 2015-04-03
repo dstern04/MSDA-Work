@@ -1,0 +1,25 @@
+
+<myLibrary>
+  <book>
+      <title>Plenty</title>
+      <author>Yolam Ottolenghi</author>
+      <author>Jonathan Lovekin</author>
+      <cuisine>Vegetarian</cuisine>
+      <yearPub>2011</yearPub> 
+      <ISBN>1452101248</ISBN>
+  </book>
+  <book>
+      <title>Mastering the Art of French Cooking</title>
+      <author>Julia Child</author>
+      <cuisine>French</cuisine>
+      <yearPub>1961</yearPub> 
+      <ISBN>375413405</ISBN>
+  </book>
+  <book>
+      <title>Balaboosta</title>
+      <author>Einat Admony</author>
+      <cuisine>Israeli</cuisine> 
+      <yearPub>2013</yearPub>
+      <ISBN>1579655009</ISBN>
+  </book>
+</myLibrary>

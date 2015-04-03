@@ -1,0 +1,82 @@
+---
+title: "IS 605 Assignment 8"
+author: "David Stern"
+email: david.c.stern@gmail.com
+date: "March 21, 2015"
+output: html_document
+---
+
+Problem Set 1
+=============
+
+Exercise: Your colleague either commutes by train or by the bus. 20 days of the month,
+she takes the train and the remaining 10 days she takes the bus. If she takes the
+train, she reaches work on time with a probability of 0.9. If she takes the bus, she
+frequently gets stuck in traffic and reaches work on time with a probability of 0.5.
+Given that she was on time today, what is the probability that she took the bus to
+work today?
+
+To solve this problem, we will use Bayes' Theorem. 
+
+$P(\textit{B} | \textit{O}) = P(\textit{Taking the Bus if On-time}) = \frac{P(\textit{O} | \textit{B})P(\textit{B})}{P(\textit{O} | \textit{B})P(\textit{B}) + P(\textit{O} | \neg{B})P(\neg{B})}$
+
+Assuming a 30-day month, we know the following probabilities:
+
+$P(\textit{B}) = P(\textit{Taking the Bus}) = \frac{10}{30} = \frac{1}{3}$
+
+$P(\neg{B}) = P(\textit{Not Taking the Bus}) = P(\textit{Taking the Train}) = \frac{20}{30} = \frac{2}{3}$
+
+$P(\textit{O} | \textit{B}) = P(\textit{On-time if taking the Bus}) = \frac{1}{2}$
+
+$P(\textit{O} | \neg{B}) = P(\textit{On-time if not taking the Bus}) = P(\textit{On-time if taking the Train}) = \frac{9}{10}$
+
+$P(\textit{B} | \textit{O}) = \frac{(\frac{1}{2})(\frac{1}{3})}{(\frac{1}{2})(\frac{1}{3}) + (\frac{9}{10})(\frac{2}{3})} = \frac{5}{23}$ 
+
+Problem Set 2
+=============
+
+First we will load in the probabilities found in the Grade Network:
+
+```{r}
+suppressWarnings(suppressMessages(require(gRain)))
+yn <- c("yes","no")
+hl <- c("high","low")
+d <- cptable(~difficulty, values=c(70,30),levels=yn) 
+i <- cptable(~intelligence, values=c(20,80),levels=hl) 
+s.i <- cptable(~sat|intelligence, values=c(80,20,10,90), levels=hl)
+l.g <- cptable(~letter|grade, values=c(95,5,10,90), levels=hl) 
+g.di <- cptable(~grade|intelligence:difficulty,values=c(90,10,20,80,99,1,40,60),levels=hl)
+plist <- compileCPT(list(d, i, s.i, l.g, g.di))
+```
+
+We can check the probabilities of each outcome: Difficulty of the Course, Intelligence, SAT Score, and Letter of Recommendation.
+
+```{r}
+plist$intelligence
+plist$sat
+plist$letter
+plist$grade
+plist$difficulty
+```
+
+From the last ouput, we can see that the probability of the difficulty of the course, ceteris paribus, is 0.7. In this next step, we will introduce evidence that the letter of recommendation was good. We will see that the probability of the difficulty of the course went down to 0.627.
+
+```{r}
+test <- grain(plist)
+goodLetter <- setFinding(test,nodes=c("letter"), states=c("high"))
+(querygrain(goodLetter, nodes=c("difficulty"), type="marginal"))
+```
+
+Now we will introduce evidence that both the letter of recommendation was good and the SAT scores were good. The probability of the difficulty of the course goes up slightly to 0.668.
+
+```{r}
+goodLetterAndSat <- setFinding(goodLetter,nodes=c("letter","sat"), states=c("high","high"))
+(querygrain(goodLetterAndSat, nodes=c("difficulty"), type="marginal"))
+```
+
+Since we are introducing new evidence, based on the same nodes - first we knew the letter was good, and now we know both the letter and the scores were good - we should check if the "duplication" of evidence distorted our results. We will do so by testing the second round of evidence as if it were freshly presented. We will do so simply by switching out "goodLetter" in the setFinding function for "test". This will show us the same results.
+
+```{r}
+goodLetterAndSat <- setFinding(test,nodes=c("letter","sat"), states=c("high","high"))
+(querygrain(goodLetterAndSat, nodes=c("difficulty"), type="marginal"))
+```
