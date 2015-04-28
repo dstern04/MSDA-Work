@@ -1,0 +1,31 @@
+---
+title: "IS 605 Assignment 12"
+author: "David Stern"
+date: "April 26, 2015"
+output: html_document
+---
+
+In this exercise, we will demonstrate the bias-variance tradeoff by fitting polynomial models of various degrees to a set of automotive data. Our dataset contains 392 observations of five variables: mpg, displacement, weight, acceleration, and horsepower.
+
+Load the dataset:
+
+```{r}
+library(boot)
+setwd("/Users/davidstern/Documents")
+carData <- read.table("auto-mpg.data",header=F)
+colnames(carData) <- c("displacement", "horsepower", "weight", "acceleration", "mpg")
+```
+
+In this next step, we will create a vector of cross-validation errors for polynomial functions of degrees 1:10. We will then plot the the vector of and see a U-shaped curve that demonstrates the tradeoff between bias and variance. At first we have a high cross-validation error, demonstrating that we have underfit the curve - the bias is high and the variance is low. As we increase the degree of the polynomial model, rhe bias decreases and the variance increases and the bias will approach zero as we better fit the model - this is where we see the bottom of the curve. We do see however see that increase bias increases again as we increase the complexity of the model - this is due to overfitting.
+
+
+```{r}
+set.seed(562)
+cv.err5 <- c()
+for (i in 1:10){
+glm.fit=glm(mpg~poly(displacement+horsepower+weight+acceleration,i), data=carData)
+cv.err5[i] <- cv.glm(carData,glm.fit,K=5)$delta[1]
+}
+degree = 1:10
+plot(degree,cv.err5,type='b',ylab="Cross Validation Error",xlab="Polynomial Degree",main="Bias Variance Trade-Off")
+```

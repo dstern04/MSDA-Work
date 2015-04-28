@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+
+<header>
+<h1>IS 605 Assignment 5</h1>
+<h3>David Stern</h3>
+</header>
+
+<script>
+function backwards() {
+    var turn = prompt("Enter a word to reverse:");
+        document.getElementById("demo").innerHTML =
+        turn.split('').reverse().join('');
+}
+</script>
+
+<body>
+
+<h2>Problem 1</h2>
+
+<p>You can reverse a word by using the following prompt.</p>
+
+<button onclick="backwards()">Click Here to Reverse</button>
+
+<p id="demo"></p>
+<h2>Problem 2</h2>
+
+<p>The following prompt will take a number and return a table of the first 20 multiples of that number.</p>
+
+<button onclick="multi()">Multiply</button>
+<p></p>
+<table border="1" cellspacing="1" cellpadding="5">
+<tr>
+  <td id="out1"></td>
+  <td id="out2"></td>
+  <td id="out3"></td>
+  <td id="out4"></td>
+</tr>
+<tr>
+  <td id="out5"></td>
+  <td id="out6"></td>
+  <td id="out7"></td>
+  <td id="out8"></td>
+</tr>
+<tr>
+  <td id="out9"></td>
+  <td id="out10"></td>
+  <td id="out11"></td>
+  <td id="out12"></td>
+</tr>
+<tr>
+  <td id="out13"></td>
+  <td id="out14"></td>
+  <td id="out15"></td>
+  <td id="out16"></td>
+</tr>
+<tr>
+  <td id="out17"></td>
+  <td id="out18"></td>
+  <td id="out19"></td>
+  <td id="out20"></td>
+</tr>
+</table>
+
+<script>
+function multi() {
+    var ourInt = prompt("Please enter an integer");
+    document.getElementById("out1").innerHTML = ourInt;
+    document.getElementById("out2").innerHTML = 2*ourInt;
+    document.getElementById("out3").innerHTML = 3*ourInt;
+    document.getElementById("out4").innerHTML = 4*ourInt;
+    document.getElementById("out5").innerHTML = 5*ourInt;
+    document.getElementById("out6").innerHTML = 6*ourInt;
+    document.getElementById("out7").innerHTML = 7*ourInt;
+    document.getElementById("out8").innerHTML = 8*ourInt;
+    document.getElementById("out9").innerHTML = 9*ourInt;
+    document.getElementById("out10").innerHTML = 10*ourInt;  
+    document.getElementById("out11").innerHTML = 11*ourInt;
+    document.getElementById("out12").innerHTML = 12*ourInt;
+    document.getElementById("out13").innerHTML = 13*ourInt;
+    document.getElementById("out14").innerHTML = 14*ourInt;
+    document.getElementById("out15").innerHTML = 15*ourInt;
+    document.getElementById("out16").innerHTML = 16*ourInt;
+    document.getElementById("out17").innerHTML = 17*ourInt;
+    document.getElementById("out18").innerHTML = 18*ourInt;
+    document.getElementById("out19").innerHTML = 19*ourInt;
+    document.getElementById("out20").innerHTML = 20*ourInt;
+}
+</script>
+
+
+</body>
+
+</html>

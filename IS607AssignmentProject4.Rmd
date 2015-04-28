@@ -1,0 +1,80 @@
+---
+title: "IS 607 Project 4"
+author: "David Stern"
+date: "April 26, 2015"
+output: html_document
+---
+
+In this excercise, we will scrape data about blog posts from a website about R.
+
+```{r}
+library(rvest)
+library(magrittr)
+library(stringr)
+```
+
+```{r}
+rBlog <- html("http://www.r-bloggers.com/search/web%20scraping/")
+
+title <- rBlog %>%
+  html_nodes("#leftcontent h2") %>%
+  html_text()
+
+date <- rBlog %>%
+  html_nodes(".date") %>%
+  html_text()
+
+meta <- rBlog %>%
+  html_nodes(".meta") %>%
+  html_text()
+
+meta
+```
+
+The .meta tag we used to pull author data also returns the date. Here we will use the stringr package to cut the extra data.
+
+```{r}
+meta <- str_split(string=meta,pattern="By ") # Split the string after the date with "By", which precedes the author
+author <- c() # initialize the vector
+for (i in 1:10){
+author[i] <- meta[[i]][2]
+}
+meta
+```
+
+Now we will store the information about the blog posts into a dataframe:
+
+```{r}
+blogPosts <- data.frame(title,author,date)
+blogPosts
+```
+
+We can use the same code to scrape content from the site containing posts about Twitter. The only changes we will make is storing the new web contect to "twitterBlog". The only issue we will face is that the first author email is an email address, which appears to be protected from web-scraping operations:
+
+```{r}
+twitterBlog <- html("http://www.r-bloggers.com/search/twitter/")
+
+title <- twitterBlog %>%
+  html_nodes("#leftcontent h2") %>%
+  html_text()
+
+date <- twitterBlog %>%
+  html_nodes(".date") %>%
+  html_text()
+
+meta <- twitterBlog %>%
+  html_nodes(".meta") %>%
+  html_text()
+  
+meta <- str_split(string=meta,pattern="By ") 
+author <- c() 
+for (i in 1:length(meta)){
+author[i] <- meta[[i]][2]
+}
+blogPosts2 <- data.frame(title,author,date)
+blogPosts2
+```
+
+
+
+

@@ -1,0 +1,182 @@
+---
+title: "IS 605 Assignment 11"
+author: "David Stern"
+date: "April 22, 2015"
+output: html_document
+---
+
+Problem 1
+---------
+
+Based on a sample of 15 data points, we will perform a regression analysis that will show how maximum heart rate is related to age. The equation we are evaluating is 
+
+$MaxHR = 220 - Age$
+
+```{r}
+Age <- c(18,23,25,35,65,54,34,56,72,19,23,42,18,39,37)
+MaxHR <- c(202,186,187,180,156,169,174,172,153,199,193,174,198,183,178)
+```
+
+This will show us the intercept and slope of the least regression line. It appears that the equation is almost spot-on.The y-intercept is 210 and the slope is -0.7977, a very strong negative correlation. To be more precise:
+
+$MaxHR = 220 - 0.8 \times Age$
+
+The null hypothesis is that Age does not have an effect on HR $B_{1}$ = 0. The alternative hypothesis is that Heart Rate decreases with Age: $B_{0}$ < 0
+
+```{r}
+fit <- lm(MaxHR ~ Age)
+fit
+```
+
+Draw up a quick scatterplot:
+
+```{r}
+plot(Age,MaxHR,main="Max Heart Rate vs. Age") # Appears to be a strong negative correlations
+abline(fit,col="red")
+```
+
+We can determine the significance of the relationship between max heart rate and age by calling the summary stats for the least regression line and checking the p-value:
+
+```{r}
+summary(fit)
+```
+
+Since the p-value is far smaller than the 0.05, we can determine that there is a very significant relationship
+between the two variables. We can safely reject the null hypothesis.
+
+Problem 2
+---------
+
+In this section, we will perform linear regression on a dataset of auto data. We have 392 data points on 5 variables: mpg,displacement,weight,acceleration, and displacement. We will consider mpg the dependent variable and the others independent variables. First, we will perform regression as above, finding the least regression line for the mpg against each indepent variable, separately.
+
+```{r}
+setwd("/Users/davidstern/Documents")
+carData <- read.table("auto-mpg.data",header=F)
+colnames(carData) <- c("displacement", "horsepower", "weight", "acceleration", "mpg")
+```
+
+$\textbf{Displacement}$
+
+```{r}
+fitDisp <- lm(carData$displacement ~ carData$mpg)
+fitDisp
+plot(carData$mpg,carData$displacement,main="Displacement vs. MPG",xlab="MPG",ylab="Displacement") 
+abline(fitDisp,col="red")
+```
+
+The Displacement Equation is:
+
+$Displacement = 447.50  - 10.79 \times MPG$
+
+$\textbf{Horsepower}$
+
+```{r}
+fitHP <- lm(carData$horsepower ~ carData$mpg)
+fitHP
+plot(carData$mpg,carData$horsepower,main="Horsepower vs. MPG",xlab="MPG",ylab="HP") 
+abline(fitHP,col="red")
+```
+
+The horsepower equation is: 
+
+$HP = 194.48 - 3.84 \times MPG$
+
+$\textbf{Weight}$
+
+```{r}
+fitWeight <- lm(carData$weight ~ carData$mpg)
+fitWeight
+plot(carData$mpg,carData$weight,main="Weight vs. MPG",xlab="MPG",ylab="Weight") 
+abline(fitWeight,col="red")
+```
+
+The weight equation is $Weight = 5101.11 - 90.57 \times MPG$
+
+$\textbf{Acceleration}$
+
+```{r}
+fitAcceleration <- lm(carData$acceleration ~ carData$mpg)
+fitAcceleration
+plot(carData$mpg,carData$acceleration,main="Acceleration vs. MPG",xlab="MPG",ylab="Acceleration") 
+abline(fitAcceleration,col="red")
+```
+
+The Acceleration Equation is:
+
+$Acceleration = 12.03 + 0.15 \times MPG$
+
+Now we will will find the linear regression fit equation considering mpg as a dependent variable and the displacement,horsepower, weight, and acceleration as independent variables.
+
+First we will perform the regression by taking 40 random data points from the mpg dataset:
+
+```{r}
+set.seed(23382)
+set40 <- carData[sample(1:392,40),]
+fit40 <- lm(mpg ~ displacement +  horsepower + weight + acceleration,data = set40)
+fit40
+```
+
+Our equation is:
+
+$mpg = 48.779259 - 0.006894 \times displacement - 0.052741 \times horsepower - 0.005744 \times weight - 0.331730 \times acceleration$
+
+```{r}
+summary(fit40)
+```
+
+The standard errors for each of the variables are as follows:
+
+Displacement: 0.017182,
+Horsepower: 0.039971,
+Weight: 0.002412,
+Acceleration: 0.324157
+
+The significance levels for each of the variables are as follows:
+
+Displacement: 0.06907,
+Horsepower: 0.1956,
+Weight: 0.0228,
+Acceleration: 0.3132
+
+The 95% confidence interval for the entire data set is as follows:
+
+```{r}
+confint(fit40,level=0.95)
+```
+
+We will now perform the multiple regression using all 392 data points.
+
+```{r}
+all <- lm(mpg ~ displacement +  horsepower + weight + acceleration,data = carData)
+all
+```
+
+Our equation is: 
+
+$mpg = 45.251140 - 0.006001 \times displacement - 0.043608 \times horsepower - 0.005281 \times weight - 0.023148 \times acceleration$
+
+```{r}
+summary(all)
+```
+
+The standard errors for each of the variables are as follows:
+
+Displacement: 0.0067093,
+Horsepower: 0.0165735,
+Weight: 0.0008109,
+Acceleration: 0.1256012
+
+The significance levels for each of the variables are as follows:
+
+Displacement: 0.37166,
+Horsepower: 0.00885,
+Weight: 2.38e-10,
+Acceleration: 0.85388
+
+The 95% confidence interval for the entire data set is as follows:
+
+```{r}
+confint(all,level=0.95)
+```
+
+As we can see from the two results, the standard error and significance vary greatly between the sample and the entire population. Based on these significant levels for the population, it seems that horsepower and weight have the most significant impact on mpg.

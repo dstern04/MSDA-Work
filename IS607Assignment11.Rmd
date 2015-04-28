@@ -1,0 +1,40 @@
+---
+title: "IS 607 Assignment 11"
+author: "David Stern"
+date: "April 20, 2015"
+output: html_document
+---
+
+For this assignment, I will use the NYT Book Reviews API to retrieve information for books written by Christa Wolf.
+
+```{r}
+library(RCurl)
+library(rjson)
+```
+
+When we call the JSON data, we will first transform it into a nested list. Data for each reviewed book has is stored in its own list, so we will run a double for loop to calleach piece of data from each listed book and store it in a more convenient format - a dataframe.
+
+```{r}
+callAPI <- getURL("http://api.nytimes.com/svc/books/v3/reviews.json?author=Christa%20Wolf&api-key=7d713de2214ccef5898be3e678f7ca2b:13:69774814")
+jsonList <- fromJSON(callAPI) # Turn JSON data into a list
+jsonList <- jsonList$results # Cut through the nested list and narrow down to the results list
+christaWolf <- data.frame() #initialize dataframe
+```
+
+Run the loops:
+
+```{r}
+for (i in 1:length(jsonList)){
+  for(j in 1:length(jsonList[[1]])){
+    christaWolf[i,j] <- jsonList[[i]][[j]]
+  }  
+}
+```
+
+Now we will rename the columns of our dataframe:
+
+```{r}
+ourHeaders <- names(jsonList[[1]])
+colnames(christaWolf) <- ourHeaders
+christaWolf[,c(2,4,5,7)] # call part of data frame
+```
