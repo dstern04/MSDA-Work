@@ -1,0 +1,106 @@
+---
+title: "IS 605 Assignment 13"
+author: "David Stern"
+date: "May 2, 2015"
+output: html_document
+---
+
+Part 1
+------
+
+For this exercise, we want to compute the derivative of $f(x) = x^{3} + 2x^{2}$ at any value of x. We will compute this approximation using limits. We know that for all values of $\textit{x}$ where the limit exists:
+
+$$f'(x) = \lim_{h \to\ 0} \frac{f(x+h) - f(x)}{h}$$
+
+We will build our function using this definition and a very small value of $\textit{h}$ to approximate the limit approaching zero. We will then round out the very small decimal at the end.
+
+```{r}
+derive <- function(x){
+  result <- ((x+1e-5)^3 + 2*(x+1e-5)^2 - x^3 - 2*x^2)/1e-5
+  result <- round(result,0)
+  return(result)
+}
+```
+
+We can easily compute the derivative of $f(x) = x^{3} + 2x^{2}$ as $f'(x) = 3x^{2} + 4x$. So we can test the derivative function simply by calling some small values:
+
+$$f'(1)=7$$
+$$f'(2)=20$$
+$$f'(3)=39$$
+
+```{r}
+derive(1)
+derive(2)
+derive(3)
+```
+
+Now we will write a program that computes the area under the curve for $f(x) = 3x^{2} + 4x$ in the range x=[1,3]. To approximate the area under the curve, we will sum the area of one million rectangles under the curve over the range.
+
+First we create our curve:
+
+```{r}
+curve <- function(x){
+ 3*x^2 + 4*x
+}
+```
+
+Now we will set $\Delta$ = 1e-6 and create a sequence of x-values corresponding to the left-border of each rectangle over the range x=[1,3].
+
+```{r]}
+deltaX <- 1e-6
+AtoB <- seq(1,3,1e-6)
+```
+
+To compute the area, we sum the area of each rectangle:
+
+```{r}
+area <- 0
+for (i in 1:length(AtoB)){
+ area <- area + curve(AtoB[i])*deltaX
+}
+area
+```
+
+We can check our answer by calculating the definite integral:
+
+$$\int_{1}^{3} 3x^{2} + 4x  dx = \left[x^{3} + 2x^{2}\right]_1^3 = (27 + 18) - (1 + 2) = 42$$
+
+Part 2
+------
+
+Use integration by parts to solve for $\int sin(x)cos(x) dx$. For the following two problems, our formula will be :
+
+$$\int fg'  dx = fg - \int f'g  dx$$
+
+$\textbf{Problem 1}$: $\int sin(x)cos(x) dx$ For this problem, we will attempt to solve it with: $f(x) = g(x) = cos(x)$.
+
+$$\int -sin(x)cos(x) dx = cos^{2}x - \int -sin(x)cos(x) dx$$
+$$-\int sin(x)cos(x) dx = cos^{2}x + \int sin(x)cos(x) dx$$
+$$-2\int sin(x)cos(x) dx = cos^{2}x$$
+$$\int sin(x)cos(x) dx = -\frac{cos^{2}x}{2} + C$$
+
+$\textbf{Problem 2}$: $\int x^{2}e^{x} dx$. For this problem, we will attempt to solve it with $f(x) = x^{2}$ and $g(x) = e^{x}$.
+
+$$\int x^{2}e^{x} dx = x^{2}e^{x} - \int 2xe^{x} dx$$
+$$\int x^{2}e^{x} dx = x^{2}e^{x} - 2\int xe^{x} dx$$
+$$\textit{We will use integration by parts again to solve for} \int xe^{x}.$$
+$$\int xe^{x} dx = xe^{x} - \int e^{x} dx$$
+$$\int xe^{x} dx = xe^{x} - (e^{x} + C)$$
+$$\textit{Now we will plug the formula for} \int xe^{x} \textit{into the equation}.$$
+$$\int x^{2}e^{x} dx = x^{2}e^{x} - 2(xe^{x} - (e^{x} + C))$$
+$$ = x^{2}e^{x} - 2xe^{x} + 2e^{x} + C$$
+$$\textit{We will not double C alegbraically, as it is an arbitary constant.}$$
+
+For the next problem, we will solve usingt the product rule of differentiation: $(fg)' = f'g + fg'$.
+
+$\textbf{Problem 3}$:
+
+$$\frac{d}{dx}(xcos(x)) = cos(x)\frac{d}{dx}(x) + x\frac{d}{dx}(cos(x))$$
+$$ = cos(x) + x(-sin(x))$$
+$$ = cos(x) - xsin(x)$$
+
+$\textbf{Problem 4}$:
+
+$$\frac{d}{dx}(e^{x^{4}}) = e^{x^{4}}\frac{d}{dx}(x^{4})$$
+$$ = e^{x^{4}}4x^{3}$$
+

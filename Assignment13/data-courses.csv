@@ -1,0 +1,25 @@
+id,GivenName,Surname,CourseDept,CourseNumber,CourseName,Grade,Section,Instructor
+10414,Franklin,Kerry,Mathematics,101,Calculus I,B,39767,Willis
+10414,Franklin,Kerry,English,110,Freshman Seminar,A,10211,Coates
+10414,Franklin,Kerry,Mathematics,103,Calculus II,IP,41098,Willis
+10414,Franklin,Kerry,History,301,Modern Africa,IP,76980,Jones
+12767,Clarence,Moose,Mathematics,105,Introduction to Linear Algebra,C,86868,Fink
+12767,Clarence,Moose,English,110,Freshman Seminar,A,10211,Coates
+12767,Clarence,Moose,Mathematics,101,Calculus I,IP,54656,Willis
+12767,Clarence,Moose,History,301,Modern Africa,IP,76980,Jones
+15858,Nola,Jensen,Mathematics,101,Calculus I,B,39767,Willis
+15858,Nola,Jensen,English,110,Freshman Seminar,B,10211,Coates
+15858,Nola,Jensen,Mathematics,103,Calculus II,IP,41098,Willis
+15858,Nola,Jensen,History,303,Ancient Egypt,IP,31332,Lattimer
+16852,Iris,White,Mathematics,101,Calculus I,B,39767,Willis
+16852,Iris,White,English,110,Freshman Seminar,C,10211,Coates
+16852,Iris,White,Mathematics,103,Calculus II,IP,41098,Willis
+16852,Iris,White,History,303,Ancient Egypt,IP,31333,Lattimer
+18885,Eric,Davis,Mathematics,105,Introduction to Linear Algebra,A,86868,Fink
+18885,Eric,Davis,English,110,Freshman Seminar,A,10211,Coates
+18885,Eric,Davis,Mathematics,101,Calculus I,IP,54656,Willis
+18885,Eric,Davis,History,303,Ancient Egypt,IP,31333,Lattimer
+19457,Richard,Kowalski,Mathematics,105,Introduction to Linear Algebra,A,86868,Fink
+19457,Richard,Kowalski,English,110,Freshman Seminar,A,10211,Coates
+19457,Richard,Kowalski,Mathematics,120,Finite Mathematics,IP,12136,Judge
+19457,Richard,Kowalski,History,301,Modern Africa,IP,76980,Jones

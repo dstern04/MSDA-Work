@@ -1,0 +1,44 @@
+//David Stern
+//Assignment 13
+
+Load Student Nodes:
+
+load csv with headers from "file:/Users/davidstern/Downloads/data-students-and-housing.csv" as students create (s1:Student {firstname: students.GivenName,lastname: students.Surname, id: students.id, gender: students.Gender,address: students.StreetAddress, city: students.City, state: students.State, zipcode: students.ZipCode, phone: students.TelephoneNumber,dormitory: students.Dormitory,room: students.Room})
+
+//Load Course Node:
+
+//For this step, I created a new csv file for distinct courses. It includes information on Course Dept, Course Number, Course Name,Section, and Instructor.
+
+load csv with headers from "file:/Users/davidstern/Downloads/data-courses-unique.csv" as courses create (c1:Course {department: courses.CourseDept, number: courses.CourseNumber, title: courses.CourseName})
+
+//Load Dormitory Node:
+
+//For this step, I created a new cvs file that included the names of each of the dorms.
+
+load csv with headers from "file:/Users/davidstern/Downloads/data-housing.csv" as dorms create (n:Dorm {name: dorms.Dormitory})
+
+//Build Relationship: Housed
+
+load csv with headers from "file:/Users/davidstern/Downloads/data-students-and-housing.csv" as students match (a:Student {dormitory: students.Dormitory,room: students.Room}),(b:Dorm {name: students.Dormitory}) create (a) - [r:Housed {room: students.Room}]-> (b)
+
+//Build Relationship: Completed
+
+load csv with headers from "file:/Users/davidstern/Downloads/data-courses.csv" as courses match (c:Student {id: courses.id}),(d:Course {number: courses.CourseNumber}) where courses.Grade = 'A' or courses.Grade = 'B' or courses.Grade = 'C' create (c) - [r:Completed {section: courses.Section,instructor: courses.Instructor, grade: courses.Grade}]-> (d)
+
+//Build Relationship: Enrolled
+
+load csv with headers from "file:/Users/davidstern/Downloads/data-courses.csv" as courses match (c:Student {id: courses.id}),(d:Course {number: courses.CourseNumber}) where courses.Grade = ‘IP’ create (c) - [r:Enrolled {section: courses.Section,instructor: courses.Instructor, grade: courses.Grade}]-> (d)
+
+//For this task, I think it would be a better choice to use a SQL database for two reasons. The first is that joining the information would be easier between sets of data such as the students nodes with a primary key of ‘id’, and the course information, which includes the student id as a foreign key. The second is that I believe the housing relationship would be easier to define with the use of an self-join than it would be to pre-process dorm information in a separate file. On the other hand, the graph features in Neo4j are a really neat way to visualize information. The ability to set different labels for nodes and relationships is really neat. 
+
+//Find all roommates of Richard Kowalski:
+
+match (s:Student)-[r:Housed{room:'301'}]-(b:Dorm{name:'Harmon'}) return s
+
+//To update Richard Kowalski’s course status, we will delete the Enrolled Relationship and then add a new Completed relationship.
+
+match (s:Student{firstname: 'Richard',lastname: 'Kowalski'})-[r:Enrolled]-(c:Course{department: 'Mathematics',number:'120'}) delete r
+
+match (s:Student{firstname: 'Richard',lastname: 'Kowalski'}),(c:Course{department: 'Mathematics',number:'120'}) create (s)-[r:Completed {section: '12136',instructor: 'Judge',grade:'B'}]->(c) return r
+
+
