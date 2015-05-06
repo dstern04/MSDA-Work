@@ -1,0 +1,69 @@
+# Problem Set 1
+A <- matrix(c(1,-1,2,0,3,4), nrow=2)
+X <- A %*% t(A)
+Y <- t(A) %*% A
+eigenValuesX <- eigen(X)$values
+eigenVectorsX <- eigen(X)$vectors
+eigenValuesY <- eigen(Y)$values
+eigenVectorsY <- eigen(Y)$vectors
+# If we look at the eigenvalues of X and Y, we see that they are the same, although they vary in significant figures
+eigenValuesX
+eigenValuesY
+# To address this, we will round each set of eigenvalues to 6 significant figures
+eigenValuesX <- round(eigenValuesX, 6)
+eigenValuesY <- round(eigenValuesY, 6)
+# Now if we run eigenValuesY, we can see that the third value is 0
+eigenValuesY
+# We cannot test if the two lists are equal because they have different lengths. Now that we have rounded 
+# each list of eigenvalues to the same number of significant figures, we can test their equality elementwise
+eigenValuesX[1] == eigenValuesY[1]
+eigenValuesX[2] == eigenValuesY[2]
+# Both return true
+# Now we want to see if the eigenvalues are the squares of the non-zero singular values of A, given by: svd(A)$d
+sqrt(eigenValuesX) == svd(A)$d
+# This returns False for both values, but we may have to round svd(A)$d to the same number of significant figures
+nzsvA <- round(svd(A)$d,6) # nzsvA = "non-singular zero values of A"
+round(sqrt(eigenValuesX),6) == nzsvA
+# Both return true!
+U <- svd(A)$u # left-singular vectors of A
+# The matrix U contains the left-singular vectors of A. We can test if these are the eigenvectors of X by 
+# testing their divisibilty. If the left-singular vectors are a nonzero scalar multiple of the eigenvectors of X,
+# then they are also eigenvectors. If %/% returns the same integer for each row in the eigenvector, we know that 
+# they will be a scalar multiple.
+eigenVectorsX[,1] %/% U[,1]
+eigenVectorsX[,2] %/% U[,2]
+# Now we will test if the right-singular vectors of A are the eigenvectors of Y
+V <- svd(A)$v # right-singular vectors of A
+# If we look at the first two columns of V (ignore the third because the corresponding eigenvalue is 0), 
+# we can see that the first two columns are scalar multiples of the eigenvectors of Y
+V
+eigenVectorsY
+round(eigenVectorsY[,1],6) %/% round(V[,1],6)
+round(eigenVectorsY[,2],6) %/% round(V[,2],6)
+# This demonstrates that both U and V are scalar multiples of the eigenvectors of X and Y, respectively,
+# and are therefore also eigenvectors of X and Y
+
+# Problem Set 2
+# Here we will create a function that takes a matrix as an input and outputs the inverse matrix.
+# First we will create a "template" cofactor Matrix, with the same dimensions as the input matrix with 
+# all elements set to 0. Then, we will run 2 for loops that will iterate over every element x[i,j].
+# The next step assigns a value for each cofactor - it will be equal to the determinate of the submatrix M[i,j].
+# We use M[-i,-j] to eliminate the corresponding row and column from the input matrix. We then multiply 
+# by -1^(i+j) in order to alternate signs. Last, we print the inverse matrix by taking the transpose 
+# of our cofactorMatrix and dividing by the determinate of the input matrix.
+myinverse <- function(x){
+  cofactorMatrix <- matrix(rep(0,length(x)),ncol=ncol(x))
+  for (i in 1:ncol(x)) {
+    for (j in 1:nrow(x)) {
+      cofactorMatrix[i,j] <- det(x[-i,-j])*(-1)^(i+j) 
+    }
+  }
+  print(t(cofactorMatrix)/det(x)) 
+}
+# Now we will test the function, with a sample matrix, A:
+A <- matrix(c(2,4,5,7,7,12,8,3,5), nrow = 3)
+B = myinverse(A)
+# If the formula worked, then A multiplied by it's inverse (B) should return the identity matrix
+A %*% B
+# This returned very small numbers on the off-diagonals. To see it more clearly, we will round to 6 significant figures:
+round(A %*% B,6)
