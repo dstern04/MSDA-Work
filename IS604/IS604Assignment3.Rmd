@@ -1,0 +1,440 @@
+---
+title: "IS 604 Assignment 3"
+author: "David Stern"
+date: "September 30, 2015"
+output: pdf_document
+---
+
+Starting with $X_{0} = 1$, write down the entire cycle for $X_{i} = 11X_{i-1}mod(16)$.
+
+```{r} 
+X <- c(1)
+for (i in 1:15){
+  X[i+1] <- 11*X[i]%%16
+}
+X
+```
+
+Note, the magnitude of the cycle changes depending on how we express the order of operations. If we put the operations preceding the modulo in parantheses, we get a different sequence. We must be careful to included the parantheses in our syntax so that we properly build Lehmer's linear congruential model.
+
+```{r}
+X <- c(1)
+for (i in 1:15){
+  X[i+1] <- (11*X[i])%%16
+}
+X
+```
+
+The cycle of random integers we generate is $X = {1,11,9,3...}$. Our random numbers are these integers divided by the modulus, $R_{i} = \frac{X_{i}}{m} = {0.0625,0.6875,0.56250,0.1875}$.
+
+2. Using the LCG provided below: $X_{i} = (X_{i-1}+12) mod(13)$, plot the pairs $(U1, U2), (U2, U3)...$
+and observe the lattice structure obtained. Discuss what you observed.
+
+```{r}
+X <- c(1) # also starting with 1
+for (i in 1:200){
+  X[i+1] <- (X[i]+12)%%13
+}
+```
+
+To plot the lattice structure, we will take the vector of $X$ values as $X_{i}$ and derive a vector of $X_{i+1}$ values by removing the first element of $X$. To make sure we have a full set of coordinates, we will then have to remove the extra value at the tail end of $X$. 
+
+```{r}
+suppressWarnings(suppressMessages(require(ggplot2)))
+Xiplus1 <- X[-1]
+Xi <- head(X,-1)
+lattice <- data.frame(Xi,Xiplus1)
+ggplot(lattice) + geom_point(aes(x=Xi,y=Xiplus1))
+```
+
+The structure is not a lattice, so much as a line. This happened because there are only 13 unique coordinates among the 200 pairs. We can see this more clearly when we sort the data. Clearly, this is not a very good pesudo-random number generator.
+
+
+```{r}
+lattice[order(Xi),]
+```
+
+3. Implement the pseudo-random number generator:
+
+$$X_{i} = 16807X_{i-1}mod(2^{31}-1)$$
+
+Using the seed $X_{0} = 1234567$, run the generator for 100,000 observations. Perform a chi-square
+goodness-of-fit test on the resulting PRN’s. Use 20 equal-probability intervals and level $\alpha = 0.05$.
+Now perform a runs up-and-down test with $\alpha = 0.05$ on the observations to see if they are
+independent.
+
+```{r}
+X <- c(1234567)
+for (i in 1:100000){
+  X[i+1] <- (16807*X[i])%%((2^31)-1)
+}
+X[1:10]
+R <- X/((2^31)-1)
+chisq.test(R)
+```
+
+Here I used a double for loop to bin the Random Variables, $R_{i}$ in 20 equal probability intervals between 0 and 1. 
+
+```{r}
+intervals <- seq(0,1,by=0.05)
+O <- rep(0,20)
+for (i in 1:length(R)){
+  for (j in 1:20){
+  if(intervals[j] < R[i] && R[i] <= intervals[j+1]){
+  O[j] <- O[j] + 1
+    }
+  }
+}
+O
+```
+
+Judging from the values for the number of values in each interval, $O_{i}$, the distributions seems to be uniform. Now we can perform the chi square test by taing the sum of the average of the squared differences between the observed number of variables in each class and the expected number of observations. Since we are testing against a uniform distribution we should expect there to be 5,000 observations per class.
+
+$$E_{i} = \frac{N}{n} = \frac{100,000}{20}$$
+$$\chi_{0}^{2} = \Sigma_{i=1}^{n}\frac{(O_{i}-E_{i})^2}{E_{i}}$$
+
+```{r}
+sum(((O-5000)^2)/5000)
+```
+
+Since our calculated value $\chi_{O} = 14.48$ is much smaller than the value of $\chi_{0.05,9} = 30.1$*, we do not reject the null hypothesis of a uniform distribution is not rejected. 
+
+*from table A6 in the Discrete-Event System Simulation textbook
+
+```{r}
+suppressWarnings(suppressMessages(require(lawstat)))
+runs.test(R)
+```
+
+Test statistic:  $Z = -0.3447$
+
+Significance level:  $\alpha = 0.05$
+
+Critical value (upper tail):  $Z_{1-\frac{\alpha}{2}} = Z_{0.975} = 1.96$ 
+
+Critical region: Reject $H_{0}$ if $|Z| > 1.96$
+
+Since the absolute value of the test statistic is not greater than 1.96, we will not reject the null hypothesis that the variables were generated in a random manner.
+
+4.  Give inverse-transforms, composition, and acceptance-rejection algorithms for generating
+from the following density:
+
+$$f(x) = \frac{3x^{2}}{2}\:for\:-1 \leq x \leq 1, \:otherwise\:1$$
+
+First we will create an algorithm for the inverse-tranform method:
+
+$$f(x) = \frac{3x^{2}}{2}$$
+$$F(X) = \frac{x^{3}}{3} = R$$
+$$F^{1}(x) = (2R)^{\frac{1}{3}}$$
+
+```{r}
+inverseTransform <- function(){
+ u <- runif(1, min = 0, max = 1)
+ x <- (2*u)^(1/3)
+ x
+}
+inverseTransform()
+```
+
+Now we will create an algorithm for the acceptance-rejection method. For this algorithm, the function will take one input, the number of samples we want to take, and return the area under the curve by dividing the number of acceptances by the number of samples. With a large number of samples, we should expect the samples to approximate the area under the curve. If we bound bound the graph at m = 1.5, we should expect the acceptance region to approximate 0.33. The area in this region, from $-1 \leq 0 \leq 1$ and $0 \leq y \leq 1.5$ is $2 \times 1.5 = 3$
+
+
+$$\int_{-1}^{1} \frac{3x^{2}}{2} = \left[\frac{x^{3}}{2}\right]_{-1}^{1} = 1$$
+$$\frac{Acceptances}{Sample\:Space} = \frac{1}{3} = 0.33$$
+
+
+```{r}
+acceptReject <- function(n){
+  counter <- 0 
+  x <- runif(n,-1,1) 
+  y <- runif(n,0,1) 
+  fx <- 1.5*x^2
+  for (i in 1:n){if (1.5*y[i] <= fx[i]){counter <- counter + 1}} 
+  area <- counter/n 
+  return(area)
+                          }
+acceptReject(1000)
+```
+
+
+5. Implement, test, and compare different methods to generate from a $N(0,1)$ distribution.
+
+a) The simplest generator is the inverse transform method. Create a function normrandit that:
+
+1. Takes no input variables.
+2. Generates a uniform random number $U ~ U(0,1)$
+3. Returns one output variable: $X = F^{-1}(U) where F^{-1}$ is the inverse normal CDF.
+
+For this generator, we will use the r built in $\textit{qnorm}$ to calculate X from the inverse normal CDF.
+
+```{r}
+normrandit <- function(){
+   U <- runif(1,0,1)
+   X <- qnorm(U)
+   X
+}
+normrandit()
+```
+
+Also create a function itstats that:
+1. Takes one input variable $N$.
+2. Generates $N$ samples from a $N(0,1)$ distribution using $\textit{normrandit}$.
+3. Returns two output variables: the mean and the standard deviation of the samples.
+
+```{r}
+itstats <- function(n){
+  samples <- c()
+  for(i in 1:n){samples[i] <- normrandit()}
+  mean <- mean(samples)
+  sd <- sd(samples)
+  return(c("mean" = mean,"sd"=sd))
+}
+itstats(1000)
+```
+
+Next up, we want to generate samples using the Box-Müller algorithm. Create a function $\textit{normrandbm}$ that:
+1. Takes no input variables.
+2. Generates two uniform random numbers $U_{1},U_{2}~U(0,1)$
+3. Returns two output variables: 
+
+$$X = (-2ln(U_{1}))^{\frac{1}{2}}cos(2\pi U_{2})$$
+$$Y = (-2ln(U_{1}))^{\frac{1}{2}}sin(2\pi U_{2})$$
+
+```{r}
+normrandbm <- function(){
+  U1 <- runif(1,0,1)
+  U2 <- runif(1,0,1)
+  X <- ((-2*log(U1))^(0.5))*cos(2*pi*U2)
+  Y <- ((-2*log(U1))^(0.5))*sin(2*pi*U2)
+  variables <- c("X" = X,"Y" = Y)
+  variables
+}
+normrandbm()
+```
+
+Create a function $\textit{bmstats} that can produce $N$ samples using \textit{normrandbm} and
+return their mean and the standard deviation
+
+```{r}
+bmstats <- function(n){
+  sampledf <- data.frame()
+  for(i in 1:n){
+    newSample <- normrandbm()
+    sampledf[i,1] <- as.numeric(newSample[1]) # X is located at first index of the sample
+    sampledf[i,2] <- as.numeric(newSample[2]) # Y is located at second index of the sample
+               }
+    colnames(sampledf) <- c("X","Y")
+  meanY <- mean(sampledf$Y)
+  sdY <- sd(sampledf$Y)
+  meanX <- mean(sampledf$X)
+  sdX <- sd(sampledf$X)
+  return(c("mean of X" = meanX,"sd of X"=sdX, "mean of Y" = meanY, "sd of Y" = sdY))
+}
+bmstats(1000)
+```
+
+Lastly, we want to generate samples using the accept-reject approach. Create a function
+$\textit{normrandar}$ that:
+
+1. Takes no input variable.
+2. Generates two uniform random numbers $U1,U2~U(0,1)$
+3. Converts the samples to Exp(1) by calculating $X,Y = -ln(U_[i])$
+4. Accept the sample if $Y \geq \frac{(X-1)^{2}}{2}$ and reject otherwise.
+5. If sample is accepted, randomly choose sign, and return.
+6. If sample is rejected, return to 2. and try again.
+
+```{r}
+normrandar <- function(){
+  U1 <- runif(1,0,1)
+  U2 <- runif(1,0,1)
+  X <- -log(U1)
+  Y <- -log(U2)
+  if (Y >= ((X-1)^2)/2){
+      if(rnorm(1)<0){X <- -X} # Here I sample from the standard normal distribution for each X and Y
+      if(rnorm(1)<0){Y <- -Y} # and pass the sign.
+      variables <- c("X" = X,"Y" = Y)
+      return(variables)
+      }
+  else {normrandar()}
+}
+normrandar()
+```
+
+Create a function $\textit{arstats}$ that produces $N$ samples using \textit{normrandar} and returns their mean and standard deviation.
+
+```{r}
+arstats <- function(n){
+  sampledf <- data.frame()
+  for(i in 1:n){
+    newSample <- normrandar()
+    sampledf[i,1] <- as.numeric(newSample[1]) # X is located at first index of the sample
+    sampledf[i,2] <- as.numeric(newSample[2]) # Y is located at second index of the sample
+               }
+    colnames(sampledf) <- c("X","Y")
+  meanY <- mean(sampledf$Y)
+  sdY <- sd(sampledf$Y)
+  meanX <- mean(sampledf$X)
+  sdX <- sd(sampledf$X)
+  return(c("mean of X" = meanX,"sd of X"=sdX, "mean of Y" = meanY, "sd of Y" = sdY))
+}
+arstats(1000)
+```
+
+
+Compare and evaluate the approaches you implemented in parts a) b) and c). Run 10
+iterations of $\textit{itstats}$, $\textit{bmstats}$, and $\textit{arstats}$ for $N = 100, 1000, 10000, and 100000$, and
+calculate the average means and standard deviations produced by each method at each value of N. In addition, measure the exact CPU time required for each iteration, and calculate the average
+time required for each method at each value of N.
+
+Here we will create two functions that take the vector of N values and a stats function as inputs and return a summary matrix of the average mean, standard deviation, and processing time of 10 iterations of the function at each value of N. The first function will evaluate a stats function that returns one variable, X, and the second will evaluate a stats function that returns both X and Y.
+
+To calculate processing time, we will use the $textit{system.times}$ function. This function returns an atomic vector of system, user, and elapsed times. We will extract and use the elapsed time for our purposes here.
+
+
+```{r}
+N <- c(100,1000,10000,20000)
+
+tenIterations <- function(method,n){
+  allData <- matrix(data=NA, nrow=4, ncol=3) # create summary matrix
+  colnames(allData) <- c("mean","sd", "elapsed")
+  rownames(allData) <- n
+    for(i in 1:length(n)){
+      it10 <- replicate(10,method(n[i])) #create temp matrix of mean and sd for 10 iterations of n
+      process10 <- c() # create vector of processing times
+          for(j in 1:10){process10[j] <- system.time(method(n[i]))["elapsed"]}
+      it10 <- rbind(it10,process10) # add vector to matrix
+      allData[i,] <- apply(it10,1,mean) #calc. average mean, sd, and proc. time for 10 it, row-wise, & add to allData
+      }
+  allData
+}
+
+tenIterations2var <- function(method,n){
+  allData <- matrix(data=NA, nrow=4, ncol=5) 
+  colnames(allData) <- c("meanX","sdX","meanY","sdY", "elapsed")
+  rownames(allData) <- n
+    for(i in 1:length(n)){
+      it10 <- replicate(10,method(n[i])) 
+      process10 <- c() 
+          for(j in 1:10){process10[j] <- system.time(method(n[i]))["elapsed"]}
+      it10 <- rbind(it10,process10) 
+      allData[i,] <- apply(it10,1,mean) 
+      }
+  allData
+}
+
+ITdata <- tenIterations(itstats,N)
+BMdata <- tenIterations2var(bmstats,N)
+ARdata <- tenIterations2var(arstats,N)
+ITdata
+BMdata
+ARdata
+```
+
+For each method, plot the average means and standard deviations against the sample size. Which of the three methods appears to be the most accurate? Also, plot the average CPU time vs. N. Which of the three methods appears to take the least time?
+
+```{r}
+suppressWarnings(suppressMessages(require(gridExtra)))
+ITdf <- as.data.frame(ITdata)
+BMdf <- as.data.frame(BMdata)
+ARdf <- as.data.frame(ARdata)
+ggplot(ITdf) + geom_point(aes(x=N,y=mean,colour="red")) + ggtitle("IT mean of X")
+ggplot(BMdf) + geom_point(aes(x=N,y=meanX,colour="blue")) + ggtitle("BM mean of X")
+ggplot(BMdf) + geom_point(aes(x=N,y=meanY,colour="blue")) + ggtitle("BM mean of Y")
+ggplot(ARdf) + geom_point(aes(x=N,y=meanX,colour="green")) + ggtitle("AR mean of X")
+ggplot(ARdf) + geom_point(aes(x=N,y=meanY,colour="green")) + ggtitle("AR mean of Y")
+ggplot(ITdf) + geom_point(aes(x=N,y=sd,colour="red")) + ggtitle("IT sd of X")
+ggplot(BMdf) + geom_point(aes(x=N,y=sdX,colour="blue")) + ggtitle("BM sd of X")
+ggplot(BMdf) + geom_point(aes(x=N,y=sdY,colour="blue")) + ggtitle("BM sd of Y")
+ggplot(ARdf) + geom_point(aes(x=N,y=sdX,colour="green")) + ggtitle("AR sd of X")
+ggplot(ARdf) + geom_point(aes(x=N,y=sdY,colour="green")) + ggtitle("AR sd of Y")
+ggplot(ITdf) + geom_point(aes(x=N,y=elapsed,colour="red")) + ggtitle("IT time elapsed")
+ggplot(BMdf) + geom_point(aes(x=N,y=elapsed,colour="blue")) + ggtitle("BM time elapsed")
+ggplot(ARdf) + geom_point(aes(x=N,y=elapsed,colour="green")) + ggtitle("AR time elapsed")
+```
+
+
+While running the three functions for the values of N, I found that 100,000 samples took a prohibitively long time to process. I scaled this down to 20,000 and ran each of the functions for $N= 100,1000,10000,20000$. From the plots, we see that the processing time increases by a disproportionate magnitude between 10,000 and 20,000 samples. For each of the stats functions, we also see that the mean and standard deviation approaches 1 and 0, respectively, and varies within a few thousandths of a point at about 10,000 observations. Weighing between accuracy and efficiency, I would run all of these functions at N = 10,000. Of the three function, the Box-Müller (BM) approach seems to be the most accurate and show the least variability between each value of N. 
+
+$\textbf{Plot histograms of 100000 samples from each method and compare.}$
+
+```{r}
+ITsamplesX <- c()
+  for(i in 1:100000){ITsamplesX[i] <- normrandit()}
+BMsamplesX <- c()
+  for(i in 1:100000){BMsamplesX[i] <- normrandbm()[[1]]}
+BMsamplesY <- c()
+  for(i in 1:100000){BMsamplesY[i] <- normrandbm()[[2]]}
+ARsamplesX <- c()
+  for(i in 1:100000){ARsamplesX[i] <- normrandar()[[1]]}
+ARsamplesY <- c()
+  for(i in 1:100000){ARsamplesY[i] <- normrandar()[[2]]}
+par(mfrow=c(1,5))
+hist(ITsamplesX)
+hist(BMsamplesX)
+hist(BMsamplesY)
+hist(ARsamplesX)
+hist(ARsamplesY)
+```
+
+With the exception of the Y-values from the Acceptance-Rejection methods return a histogram that reflects a standard normal distribution.
+
+Use Monte Carlo integration to estimate the value of $\pi$
+
+In this exercise, we will create a Monte Carlo function that approximates the value of $\pi$ by simulating the area under the curve of a quarter-circle, which is centered at $(0,0)$ and has a radius equal to $1$. To do so, our function will take one input, $n$, and generate two vectors of length n that simulate $(x,y)$ coordinates between $0 \leq x \leq 1$ and $0 \leq y \leq 1$. The function will then calculate each value of $f(x_{i})$ where $f(x) = \sqrt {1-x^{2}}$. If $y_{1} \leq f(x)_{i}$, we will add the value to a counter and then divide that counter by the total number of random points and multiply by 4, which should approximate the area circle given a relatively large number $n$.
+
+
+```{r}
+estimatepi <- function(n){
+  counter <- 0 
+  x <- runif(n,0,1) 
+  y <- runif(n,0,1) 
+  fx <- sqrt(1-x^2) 
+  for (i in 1:n){if (y[i] <= fx[i]){counter <- counter + 1}} 
+  area <- 4*counter/n 
+  se <- abs(area-pi)/sqrt(1) # taking the absolute value as a short cut to sd, instead of taking the sqrt of the squared difference
+  CIupper <- area + se*1.96 
+  CIlower <- area - se*1.96
+  return(c("estimate"=area,"standard error"=se,"upper limit of 95% CI"=CIupper,"lower limit of 95% CI"=CIlower))
+                    }
+
+N <- seq(1000,10000,by=500)
+estimates <- matrix(data=NA, nrow=19, ncol=4)
+rownames(estimates) <- N
+colnames(estimates) <- names(estimatepi(1))
+for(i in 1:length(N)){
+    estimates[i,] <- estimatepi(N[i])
+    }
+estimates
+```
+
+We can be 95% certain that our estimate will be within 0.1 of the true value of $\pi$ at 1000 estimates. We can be 95% certain that our estimate will be within 0.01 of the true value of $\pi$ at 8500 estimates. Now we will replicate estimatepi 500 times at N=8500.
+
+```{r}
+it500 <- t(replicate(500,estimatepi(8500)))
+head(it500)
+```
+
+The histogram of the estimates seems appears to be normally distributed around the true value of $\pi$.
+
+```{r}
+hist(it500[,1])
+```
+
+The standard error for N=8500 from our table above is 0.0001333005. It is far less (one-hundreth) than the standard deviation from the estimates:
+
+```{r}
+sd(it500[,1])
+```
+
+This will return the percentage of samples within the confidence interval. 
+
+```{r}
+counter <- 0
+for (i in 1:500){
+  if((estimates[16,3] >= it500[i,1]) & (estimates[16,4] <= it500[i,1])){
+  counter <- counter + 1
+  }
+  inInterval <- counter/500
+}
+inInterval
+```

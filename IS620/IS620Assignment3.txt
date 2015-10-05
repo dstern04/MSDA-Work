@@ -1,0 +1,40 @@
+// David Stern
+// IS 620 Assignment 3
+
+// For this exercise, I wanted use Neo4j to visualize the structure of Apple and its subsidiaries. I based my data on a graph found in a NYT article about Apple’s web of tax shelters: http://www.nytimes.com/interactive/2013/05/21/business/apples-international-structure.html?ref=business.
+
+//In order to show this information in Neo4J, I constructed a graph with two nodes and two relationships. The Nodes are the countries of incorporation and the companies. The first relationship was constructed simply by matching each company node to its sole country of incorporation. The second relationship was built by binding the company nodes based on the ownership (as indicated in the csv file).
+
+//Load Company Nodes:
+
+load csv with headers from "file:/Users/davidstern/GitHub/MSDA-Work/IS607/Project5/apple.csv" as subsidiaries create (s1:Company {Name: subsidiaries.Company, HQ:subsidiaries.Incorporated})
+
+//Load Country Node:
+
+load csv with headers from "file:/Users/davidstern/GitHub/MSDA-Work/IS607/Project5/countries.csv" as geog create (c1:Country {Name: geog.Countries})
+
+//Build Relationship: Incorporated
+
+load csv with headers from "file:/Users/davidstern/GitHub/MSDA-Work/IS607/Project5/apple.csv" as subsidiaries match (a:Country {Name: subsidiaries.Incorporated}),(b:Company {Name: subsidiaries.Company}) create (b) - [r:IncorporatedIn]-> (a)
+
+//Build Relationship: Owns
+
+load csv with headers from "file:/Users/davidstern/GitHub/MSDA-Work/IS607/Project5/apple.csv" as subsidiaries match (a:Company {Name: subsidiaries.OwnedBy}),(b:Company {Name: subsidiaries.Company}) create (a) - [r:Owns]-> (b)
+
+// Second Longest
+
+MATCH (bottom: Company{Name:"Apple Asia Distributor China" }),(top: Company {Name:"Apple Inc" }),p = allShortestPaths((bottom)-[*]-(top)) RETURN p
+
+//Longest Pathway - this is the diameter. Apples Sales International is linked to Apple Inc through 3 edges, 2 different ways: ownership and incorporation
+
+MATCH (bottom: Company{Name:"Apple Sales International" }),(top: Company {Name:"Apple Inc" }),p = allShortestPaths((bottom)-[*]-(top)) RETURN p
+
+// We can also count the number of ways two Company nodes are linked by an exact number of edges or by a range. In the example below, we see how many direct relationships there are (1 degree). We can change the 1 to 2 or 3 to get those counts as well.
+
+MATCH (n: Company)-[r*1]-(m: Company)
+RETURN COUNT(r) AS count
+
+// If we want to get a count of how many ways nodes are linked in a range of degrees (say, 1 to 2) by using this lines:
+
+MATCH (n: Company)-[r*1..2]-(m: Company)
+RETURN COUNT(r) AS count

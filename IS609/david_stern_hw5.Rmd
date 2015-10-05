@@ -1,0 +1,108 @@
+---
+title: "IS 605 Assignment 5 David Stern"
+author: "David Stern"
+date: "September 26, 2015"
+output: pdf_document
+---
+
+Page 228: #1
+------------
+
+Consideramodelforthelong-termdiningbehaviorofthestudentsatCollegeUSA.Itis found that 25% of the students who eat at the college’s Grease Dining Hall return to eat there again, whereas those who eat at Sweet Dining Hall have a 93% return rate. These are the only two dining halls available on campus, and assume that all students eat at one of these halls. Formulate a model to solve for the long-term percentage of students
+eating at each hall
+
+```{r}
+suppressWarnings(suppressMessages(require(knitr)))
+suppressWarnings(suppressMessages(require(ggplot2)))
+```
+
+We will find the equilibirum here by running a for loop to find the number of students at each stage in Grease and Sweet Dining Halls. In the first attempt, we will assume 100 students have their first meal in Grease Dining Hall and 0 have their first meal in Sweet Dining Hall. We reach our equilibrium at the 5th meal - with about 91 students eating in Sweet and 9 eating in Grease.
+
+```{r}
+g <- c(100)
+s <- c(0)
+
+for (i in 1:10){
+  s[i+1] <- 0.75*g[i] + 0.93*s[i]
+  g[i+1] <- 0.25*g[i] + 0.07*s[i]
+  }
+
+unevenStart <- data.frame(n=c(0:10),s,g)
+kable(unevenStart)
+```
+
+Here we will see that when we start with an even number of students in each dining hall, we reach the same equilibrium one meal sooner.
+
+```{r}
+g <- c(50)
+s <- c(50)
+
+for (i in 1:10){
+  s[i+1] <- 0.75*g[i] + 0.93*s[i]
+  g[i+1] <- 0.25*g[i] + 0.07*s[i]
+  }
+
+evenStart <- data.frame(n=c(0:10),s,g)
+kable(evenStart)
+```
+
+Here we will graph 50 meals to show the long-term equilibrium between the two dining halls. It will remain at 91% Sweet and 9% Grease.
+
+```{r}
+g <- c(50)
+s <- c(50)
+
+for (i in 1:50){
+  s[i+1] <- 0.75*g[i] + 0.93*s[i]
+  g[i+1] <- 0.25*g[i] + 0.07*s[i]
+  }
+
+longrun <- data.frame(n=c(0:50),s,g)
+ggplot(longrun) + geom_line(aes(x=n,y=s),colour="blue",label="Sweet Dining Hall") + geom_line(aes(x=n,y=g),colour="red",label="Grease Dining Hall") +  ylab("Students")  + xlab("Meals")
+```
+
+Page 232: #1
+------------
+
+In this exercise, we want to determine the reliability of a stereo system. We assume the system can be divided into three subsystems that are connected in series. The first subsystem is a power amplifier with a reliability of 0.95. The second subsystem is a CD player (0.98) and FM-AM Radio (0.97) connected in parallel. The third subsystem is two speakers (each 0.99) also connected in parallel. We are also making an assumption that the system's reliability is based on its ability to play music from any source, not all possible sources. (I would personally consider a stereo unreliable if the CD player malfunctioned even if it still had radio.)
+
+```{r}
+sub1 <- 0.95
+sub2 <- 0.98+0.97-0.98*0.97 # parallel
+sub3 <- 0.99+0.99-0.99*0.99 # parallel
+system <- sub1*sub2*sub3 # series
+system
+```
+
+Page 240: #1
+------------
+
+Use the basic linear model $y = ax + b$ to fit the following data sets. Provide the model,
+provide the values of SSE, SSR, SST, and R2, and provide a residual plot. 1. For Table 2.7, predict weight as a function of height.
+
+```{r}
+height <- 60:80
+weight <- c(132,136,141,145,150,155,160,165,170,175,180,185,190,195,201,206,212,218,223,229,234)
+m <- length(height)
+a <- (m*sum(height*weight) - sum(height)*sum(weight))/(m*sum(height^2) - sum(height)^2)
+b <- (sum(height^2)*sum(weight) - sum(height*weight)*sum(height))/(m*sum(height^2) - sum(height)^2)
+SSE <- sum((weight - (a*height + b))^2)
+SST <- sum((weight-mean(weight))^2)
+SSR <- SST - SSE
+R2 <- 1 - SSE/SST
+residuals <- weight - (a*height + b)
+summary <- data.frame(a,b,SSE,SST,SSR,R2)
+data <- data.frame(height,weight,residuals)
+kable(summary)
+```
+
+Our model is: $weight = 5.1364 \times height - 178.4978$
+
+Here we can see a plot of our residuals:
+
+```{r}
+ggplot(data) + geom_point(aes(x=height,y=residuals))
+```
+
+
+#2

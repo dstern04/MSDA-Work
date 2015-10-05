@@ -1,0 +1,91 @@
+---
+title: "IS 609 Assignment 3"
+author: "David Stern"
+date: "September 18, 2015"
+output: pdf_document
+---
+
+Chapter 3 Exercises: 
+===================
+
+Page 113, #2
+ 
+In this exercise, we will determine if we can use the model $e = C_{1}S$ to approximate the following data:
+
+```{r}
+S <- c(5,10,20,30,40,50,60,70,80,90,100)/1000
+e <- c(0,19,57,94,134,173,216,256,297,343,390)*100000 
+```
+
+Now we will calculate a C value for each point and try constructing a model based on some measurements of that set of values (mean and median) as well as the result of R's lm function.
+
+```{r}
+C <- e/S
+data1 <- data.frame(e,S,C)
+meanC <- mean(C)
+medianC <- median(C)
+lm(e~S)
+suppressWarnings(suppressMessages(library(ggplot2))) #load ggplot
+meanModel <- ggplot(data1) + geom_point(aes(x=S,y=e)) +  geom_abline(color="red", slope=meanC, intercept=0) + ggtitle("Model with mean C")
+medianModel <- ggplot(data1) + geom_point(aes(x=S,y=e)) +  geom_abline(color="red", slope=medianC, intercept=0) + ggtitle("Model with median C")
+lmModel <- ggplot(data1) + geom_point(aes(x=S,y=e)) +  geom_abline(color="red", slope=406933045 , intercept=-2540713) + ggtitle("Model using built-in lm values")
+```
+
+From the following three graphs, we see that the model using the intercept and slope values from R's built in lm function give us the best fitting line. Without using this method, the value of the median C value gives us the closest approximation using the "by-hand" methods.
+
+```{r}
+meanModel
+medianModel
+lmModel
+```
+
+Page 121: #2.a
+  
+For each of the following data sets, formulate the mathematical model that minimizes the largest deviation between the data and the line $y = ax + b$. If a computer is available, solve for the estimates of a and b.
+
+Here, we will simply use the lm function in R to get the best coordinates. The least squares line will minimize the sum of the squares of the errors, or distances, between each point and the line.
+
+```{r}
+x <- c(1,2.3,3.7,4.2,6.1,7)
+y <- c(3.6,3,3.2,5.1,5.3,6.8)
+data2<- data.frame(x,y)
+lm(y~x)
+xyModel <- ggplot(data2) + geom_point(aes(x=x,y=y)) +  geom_abline(color="red", slope=0.5642 , intercept=2.2149) + ggtitle("Best Fit for X and Y")
+xyModel
+```
+
+The values for the intercept and the slope are, a = 2.2149, b=0.5642.
+
+Chapter 4 Exercises: 
+===================
+
+Page 157: #4
+
+```{r}
+X <- c(17,19,20,22,23,25,31,32,33,36,37,38,39,41)
+Y <- c(19,25,32,51,57,71,141,123,187,192,205,252,248,294)*10
+data3 <- data.frame(X,Y)
+```
+
+Here we see a proportional relationship between X (diameter) and Y (Volume).
+
+```{r]}
+plot(X,Y)
+```
+
+We know that given a dataset with $\textit{n}$ data points, there is a polynomial of at most degree $\textit{n}$ that fits all of the data points. Since there are 14 data points in this exercise, we could have a 13th-degree polynomial, but any model more complex would be overfitting the data. That is, the polynomial would start to model the random error in the data.
+
+
+```{r}
+lm(Y ~ poly(X, 14,raw=TRUE))
+lm(Y ~ poly(X, 13,raw=TRUE))
+lm(Y ~ poly(X, 12,raw=TRUE))
+```
+
+Now we will plot the line to see how it fits the data:
+
+```{r}
+fit <- lm(Y ~ poly(X, 13,raw=TRUE))
+plot(X,Y)
+lines(X,predict(fit))
+```
