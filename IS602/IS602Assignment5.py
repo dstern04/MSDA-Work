@@ -1,7 +1,6 @@
 
-# coding: utf-8
+# David Stern
 
-# In[72]:
 
 import csv
 import urllib2
@@ -14,8 +13,6 @@ data = pd.read_csv(response)
 print data
 
 
-# In[86]:
-
 sumY = data.sum(axis=0)[1]
 sumX = data.sum(axis=0)[2]
 sumXY = (data["brain"]*data["body"]).sum()
@@ -25,8 +22,6 @@ meanY = data["body"].mean()
 a = (sumY*sumX2-sumX*sumXY)/(len(data)*sumX2-sumX**2)
 b = (sumXY - len(data)*meanX*meanY)/(sumX2 - len(data)*meanX**2)
 
-
-# In[90]:
 
 print "The least squares fit for this data gives us the model:  body = ", b, "* brain ", a
 
