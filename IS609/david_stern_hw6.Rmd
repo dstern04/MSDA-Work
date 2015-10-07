@@ -1,0 +1,119 @@
+---
+title: "IS 609 Assignment 6"
+author: "David Stern"
+date: "October 5, 2015"
+output: pdf_document
+---
+
+Page 251: #2
+------------
+
+Use the model-building process described in Chapter 2 to analyze the following scenario. After identifying the problem to be solved using the process, you may find it helpful to answer the following questions in words before formulating the optimization model.
+
+a. Identify the decision variables: What decision is to be made?
+
+The decision variable in this model are Hay (H), Oats (S), Feeding-Blocks (F), and High-Protein Concentrate (P). These variables appear in the constraints and the objective function. The decision to be made is how many units of each should be purchased to meet the nutritional requirements of a horse at a minimized cost. 
+
+b. Formulate the objective function: How do these decisions affect the objective?
+
+The objective function is a cost function based on the above variables, scaled each by their distinct price. The decisions of how many units of each food source to purchase effects both the total cost and the nutrition the horse receives.
+
+$$C(H,A,F,P) = 1.8H + 3.5A + 0.4F + 1.0P$$
+
+c. Formulate the constraint set: What constraints must be satisfied? Be sure to consider whether negative values of the decision variables are allowed by the problem, and ensure they are so constrained if required.
+
+The constraints are that of the different nutritional requirements of the horse as well as non-negativity for all of the variables. (Procurement can only be positive.)
+
+$$Protein: 0.5H + 1.0A + 2.0F + 6.0P \geq 40$$
+$$Carbohydrates: 2.0H + 4.0A + 0.5F + 1.0P \geq 20$$
+$$Roughage: 5.0H + 2.0A + 1.0F + 2.5P \geq 45$$
+$$H,A,F,P \geq 0$$
+
+After constructing the model, check the assumptions for a linear program and compare the form of the model to the examples in this section. Try to determine which method of optimization may be applied to obtain a solution.
+
+The model does meets most of the criteria of a linear program: there is a unique objective function; the decision variables appear in the function and the constraints; they do not take a power term more than 1; the constraints and function do not contain products of the decision variables; and the coefficients in the constraints and function are constant. I don't believe the decision variables can take fractional values, as each of the food sources would be purchased in units. 
+
+Although this model seems to hae to requirements, it is not multiobjective. The objective is to minimize the cost and the parameters are defined by the minimal nutritional requirements. The optimization is constrainde by the four parameters.
+
+Page 264: #6
+------------
+    
+Maximize $10x + 35y$ subject to:
+
+$$8x + 6y \leq 48$$
+$$4x + y \leq 20$$
+$$y \geq 5$$
+$$x, y \geq 0$$
+
+In order to identify the feasible region and identify the extema, we will graph the lines connecting the two intercepts for each linear constraint.
+
+```{r}
+suppressWarnings(suppressMessages(require(ggplot2)))
+suppressWarnings(suppressMessages(require(knitr)))
+limit <- c("constraint 1","constraint 1","constraint 2","constraint 2","constraint 3","constraint 3")
+x <- c(6,0,0,5,3.75,0)
+y <- c(0,8,20,0,5,5)
+coordinates <- data.frame(limit,x,y)
+coordinates
+ggplot(coordinates,aes(x=x,y=y,group=limit,colour=limit)) + geom_line() + geom_area(stat="bin")
+```
+
+From this graph, we can see that feasible region for these constraints is bound by a triangle with extrema at the $x,y$ coordinates: $(0,5),(0,8),(2.25,5)$.
+
+```{r}
+x=c(0,0,2.25)
+y=c(5,8,5)
+value <- c()
+for (i in 1:3){value[i] <- 10*x[i]+35*y[i]}
+extrema <- data.frame(x,y,value)
+kable(extrema)
+```
+
+Given the constraints, we get a maximum value for $10x + 35$ at $(0,8)$.
+
+Page 268: #6 
+------------
+
+To solve the above problem algebraically, we will change the constraints to $x_{i}$ format for each $(x,y)$ in the original constraints and add a slack variable $y_{j}$ for each contraint $j$.
+
+$$8x + 6y \leq 48$$
+$$4x + y \leq 20$$
+$$y \geq 5$$
+$$x, y \geq 0$$
+
+We will ignore the last constraints, since all of our variables will be constrained by non-negativity.
+
+$$8x_{1} + 6x_{2} + y_{1} = 48$$
+$$4x_{1} + x_{2} + y_{2} = 20$$
+$$x_{2} = 5 + y_{3}$$
+$$x_{1},x_{2},x_{3},y_{1},y_{2} \geq 0 $$
+
+Since we have five variables and we will zero out two at a time, we know that there will be $\frac{5!}{3!2!} = 10$ combinations of zeroed variables in the sample. We will solve each of the systems algebraically and only keep the results of the systems that do not violate tha original constraints.
+
+```{r,echo=FALSE}
+var <- data.frame(n=1:10,var1=c("$x_{1}$","$x_{1}$","$x_{1}$","$x_{1}$","$x_{2}$","$x_{2}$","$x_{2}$","$y_{1}$","$y_{1}$","$y_{2}$"),var2=c("$x_{2}$","$y_{1}$","$y_{2}$","$y_{3}$","$y_{1}$","$y_{2}$","$y_{3}$","$y_{2}$","$y_{3}$","$y_{3}$"))
+kable(var,align="c")
+
+```
+
+1. For $x_{1},x_{2}=0$, there is no solution because the third constraint cannot contain a negative value for $y_{3}$.
+
+2. For $x_{1},y_{1}=0$, we get the following values: $x_{2}=8,y_{2}=12,y_{3}=3$. This gives us a point at $x_{1},x_{2}=(0,8)$.
+
+3. For $x_{1},y_{2}=0$, we get $x_{2}=20$ from the second constraint. Therefore, we do not have a solution the first constraint cannot have a negative value for $y_{1}$. 
+
+4. For $x_{1},y_{3}=0$, we get the following values: $x_{2}=5,y_{1}=18,y_{2}=15$. This gives us a point at $x_{1},x_{2}=(0,5)$.
+
+5. For $x_{2},y_{1}=0$, there is no solution because the third constraint cannot contain a negative value for $y_{3}$.
+
+6. For $x_{2},y_{2}=0$, there is no solution because the third constraint cannot contain a negative value for $y_{3}$.
+
+7. For $x_{2},y_{2}=0$, there is no solution because the third constraint would reduce to $0=5$. 
+
+8. For $y_{1},y_{2}=0$, we get $x_{1}=4.5,x_{2}=2$ by solving the first two constraints, but there is no solution because the third constraint cannot contain a negative value for $y_{3}$.
+
+9. For $y_{1},y_{3}=0$, we get the following values: $x_{1}=\frac{18}{8}=2.25,x_{2}=5,y_{2}=5$. This gives us a point at $x_{1},x_{2}=(2.25,5)$.
+
+10. For $y_{2},y_{3}=0$, we get $x_{1}=\frac{15}{4}=3.75,x_{2}=5$ by solving the second and third constraints, but there is no solution because the first constraint cannot contain a negative value for $y_{1}$.
+
+With the algebraic approach, we indentify the same coordinates as we did in our previous approach: $x,y: (0,5),(0,8),(2.25,5)$. We would therefore conclude that we get the same maximum value for $10x + 35$ at $(0,8)$.
