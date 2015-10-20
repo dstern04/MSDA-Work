@@ -1,0 +1,492 @@
+---
+title: "IS 604 Assignment 4"
+author: "David Stern"
+date: "October 15, 2015"
+output: html_document
+---
+
+1. In this problem, we will implement and investigate a series of variance reduction procedures for Monte Carlo methods by estimating the expected value of a cost function $c(x)$ which depends on a $D$-dimensional random variable $x$.
+
+$$c(x) = \frac{1}{(2\pi)^{\frac{D}{2}}}e^{-\frac{1}{2}x^{T}x}$$
+$$x_{i} \~ U(-5,5)\:for\:i=1..D$$
+$$Analytically,\:E[c(x)] = (\frac{1}{10})^{D}$$
+
+That is, $x$ is a $D$-dimensional random variable (i.e., a $D \times 1$ column vector) and each component of
+$x$ is uniformly distributed between $-5$ and $5$. 
+
+a) Crude Monte Carlo
+--------------------
+
+For sample sizes of $1000$ to $10000$ (in increments of $1000$), obtain $100$ estimates for $E[c(x)]$
+when $D = 1$, using crude Monte Carlo sampling. Calculate the average value of the $100$ estimates as well as their standard deviation, and plot them. In your plot, include a line showing the analytical value for $E[c(x)]$.
+
+This function will give us the expected value of the cost function with inputs $D$ for the dimension of the random variable and $N$ for the sample size. 
+
+```{r}
+EX <- function(D,N){
+  c <- numeric(N)
+  for (i in 1:N){
+    x <- runif(D,-5,5) # create D-dimensional random variable with elements from uniform distribution
+    c[i] <- exp(-0.5*sum(t(x)*x))/((2*pi)^(D/2)) # cost function
+  }
+  mean(c)
+}
+```
+
+Now we will create a matrix with a column for each sample size $N$ and 100 rows to store estimates from each iteration of the function. We will then apply column-wise functions to find the mean and standard deviation of the 100 estimates for each $N$. Here we see that even at 1000 samples, we get a very close approximation to the analytical value of 0.1 for $E[c(x)]$ at $D=1$.
+
+```{r}
+suppressWarnings(suppressMessages(library(knitr)))
+N <- seq(1000,10000,by=1000)
+estimatesD1 <- matrix(data=NA, nrow=100, ncol=length(N))
+colnames(estimatesD1) <- N
+rownames(estimatesD1) <- 1:100
+for(i in 1:length(N)){
+  for (j in 1:100){
+    estimatesD1[j,i] <- EX(1,N[i]) # D = 1
+  }
+}
+meanD1 <- apply(estimatesD1,2,mean) # mean of estimates matrix, column-wise by sample size
+stdD1 <- apply(estimatesD1,2,sd)
+cvD1 <- meanD1/stdD1
+D1 <- t(data.frame("mean"=meanD1,"sd"=stdD1,"cv"=cvD1))
+summary <- data.frame() #create dataframe for part f summary
+summary <- rbind(summary,D1[,1])
+summary <- rbind(summary,D1[,4])
+kable(D1)
+```
+
+```{r}
+suppressWarnings(suppressMessages(library(ggplot2)))
+D1 <- as.data.frame(t(D1))
+ggplot(D1) + geom_point(aes(x=N,y=mean,label="mean")) + 
+  geom_hline(yintercept=0.1,color="red") + 
+  geom_text(aes(2000,0.1,label = "E[c(x)] = 0.1", vjust = -1)) + 
+  scale_x_continuous(breaks=N) + 
+  ggtitle("Mean of 100 estimates at D=1 and N samples")  
+```
+
+
+```{r}
+ggplot(D1) + geom_point(aes(x=N,y=sd,label="standard deviation")) +  
+  scale_x_continuous(breaks=N) + 
+  ggtitle("Standard Deviation of 100 estimates at D=1 and N samples") 
+```
+
+Now we will repeat this analysis for $D = 2$.
+
+```{r}
+estimatesD2 <- matrix(data=NA, nrow=100, ncol=length(N))
+colnames(estimatesD2) <- N
+rownames(estimatesD2) <- 1:100
+for(i in 1:length(N)){
+  for (j in 1:100){
+    estimatesD2[j,i] <- EX(2,N[i]) # D = 2
+  }
+}
+meanD2 <- apply(estimatesD2,2,mean) 
+stdD2 <- apply(estimatesD2,2,sd)
+cvD2 <- meanD2/stdD2
+D2 <- t(data.frame("mean"=meanD2,"sd"=stdD2,"cv"=cvD2))
+summary <- rbind(summary,D2[,1])
+summary <- rbind(summary,D2[,4])
+kable(D2)
+
+D2 <- as.data.frame(t(D2))
+ggplot(D2) + geom_point(aes(x=N,y=mean,label="mean")) + 
+  geom_hline(yintercept=0.01,color="red") + 
+  geom_text(aes(2000,0.01,label = "E[c(x)] = 0.01", vjust = -1)) + 
+  scale_x_continuous(breaks=N) + 
+  ggtitle("Mean of 100 estimates at D=2 and N samples")  
+
+ggplot(D2) + geom_point(aes(x=N,y=sd,label="standard deviation")) +  
+  scale_x_continuous(breaks=N) + 
+  ggtitle("Standard Deviation of 100 estimates at D=1 and N samples") 
+```
+
+b) Quasi-Random Numbers
+-----------------------
+ 
+We now investigate the variance reduction properties of quasi-random numbers using Sobol numbers. To see how these Sobol numbers differ from normal random numbers, we will generate and plot 100 pairs of both.
+
+The Sobol QRNG in the R package $randtoolbox$ defaults to a uniform a distribution between 0 and 1, with optional scrambling methods. This contrast with the numbers generated from the normal random distribution, which have a mean of 0 and a standard deviation of 1. 
+
+```{r}
+suppressWarnings(suppressMessages(library(randtoolbox)))
+hist(rnorm(100))
+hist(sobol(100,d=1))
+```
+
+Repeat the analysis of part a) for $D = 1$ and $D = 2$ using Sobol quasi-random numbers. How does
+the use of Sobol numbers change the average value and standard deviation of your estimates in $D
+= 1$ and $D = 2$?
+
+To modify our approach, we first need to recognize that the Sobol distribution is uniform on the interval $(0,1)$. We will therefore have to generate our random numbers from the Sobol distribution and then scale them over the interval $(-5,5)$.
+
+```{r}
+sobol(10,1)
+sobol(10,1)
+```
+
+
+```{r}
+EXsobol <- function(D,N){
+  c <- numeric(N)
+  for (i in 1:N){
+    x <- as.vector(sobol(1,2,init=TRUE,scrambling=3,seed=i))
+    x <- (x*10)-5 # to scale to (-5,5), multiply by ten and subtract 5
+    c[i] <- exp(-0.5*sum(t(x)*x))/((2*pi)^(D/2)) 
+  }
+  mean(c)
+}
+
+sobolD1 <- matrix(data=NA, nrow=100, ncol=length(N))
+colnames(sobolD1) <- N
+rownames(sobolD1) <- 1:100
+for(i in 1:length(N)){
+  for (j in 1:100){
+    sobolD1[j,i] <- EXsobol(1,N[i]) # D = 1
+  }
+}
+meanSobolD1 <- apply(sobolD1,2,mean) 
+stdSobolD1 <- apply(sobolD1,2,sd)
+cvSobolD1 <- meanSobolD1/stdSobolD1
+sobolD1 <- t(data.frame("mean"=meanSobolD1,"sd"=stdSobolD1,"cv"=cvSobolD1))
+summary <- rbind(summary,sobolD1[,1])
+summary <- rbind(summary,sobolD1[,4])
+kable(sobolD1)
+
+sobolD1 <- as.data.frame(t(sobolD1))
+ggplot(sobolD1) + geom_point(aes(x=N,y=meanSobolD1,label="mean")) + 
+  geom_hline(yintercept=0.1,color="red") + 
+  geom_text(aes(2000,0.1,label = "E[c(x)] = 0.1", vjust = -1)) + 
+  scale_x_continuous(breaks=N) + 
+  ggtitle("Mean of 100 estimates at D=1 and N samples")  
+
+ggplot(sobolD1) + geom_point(aes(x=N,y=stdSobolD1,label="standard deviation")) +  
+  scale_x_continuous(breaks=N) + 
+  ggtitle("Standard Deviation of 100 estimates at D=1 and N samples") 
+```
+
+```{r}
+sobolD2 <- matrix(data=NA, nrow=100, ncol=length(N))
+colnames(sobolD2) <- N
+rownames(sobolD2) <- 1:100
+for(i in 1:length(N)){
+  for (j in 1:100){
+    sobolD2[j,i] <- EXsobol(2,N[i]) # D = 2
+  }
+}
+meanSobolD2 <- apply(sobolD2,2,mean) 
+stdSobolD2 <- apply(sobolD2,2,sd)
+cvSobolD2 <- meanSobolD2/stdSobolD2
+sobolD2 <- t(data.frame("mean"=meanSobolD2,"sd"=stdSobolD2,"cv"=cvSobolD2))
+summary <- rbind(summary,sobolD2[,1])
+summary <- rbind(summary,sobolD2[,4])
+kable(sobolD2)
+
+sobolD2 <- as.data.frame(t(sobolD2))
+ggplot(sobolD2) + geom_point(aes(x=N,y=meanSobolD2,label="mean")) + 
+  geom_hline(yintercept=0.01,color="red") + 
+  geom_text(aes(2000,0.01,label = "E[c(x)] = 0.01", vjust = -1)) + 
+  scale_x_continuous(breaks=N) + 
+  ggtitle("Mean of 100 estimates at D=1 and N samples")  
+
+ggplot(sobolD2) + geom_point(aes(x=N,y=stdSobolD2,label="standard deviation")) +  
+  scale_x_continuous(breaks=N) + 
+  ggtitle("Standard Deviation of 100 estimates at D=1 and N samples") 
+```
+
+For D = 1,2 we see zero variance in the estimates at each value of $N$, but the mean is not close to the analytical value for either dimension. 
+
+c) Antithetic Variates
+----------------------
+
+```{r}
+EXanti <- function(D,N){
+  cx1 <- numeric(N/2) 
+  cx2 <- numeric(N/2) 
+  for (i in 1:(N/2)){
+    x1 <- runif(D,0,1)
+    x2 <- 1 - x1
+    x1 <- (x1*10)-5 
+    x2 <- (x2*10)-5 
+    cx1[i] <- exp(-0.5*sum(t(x1)*x1))/((2*pi)^(D/2))
+    cx2[i] <- exp(-0.5*sum(t(x2)*x2))/((2*pi)^(D/2))
+    }
+  cx <- (mean(cx1)+mean(cx2))/2
+  cx
+}
+
+antiD1 <- matrix(data=NA, nrow=100, ncol=length(N))
+colnames(antiD1) <- N
+rownames(antiD1) <- 1:100
+for(i in 1:length(N)){
+  for (j in 1:100){
+    antiD1[j,i] <- EXanti(1,N[i]) # D = 1
+  }
+}
+meanAntiD1 <- apply(antiD1,2,mean) 
+stdAntiD1 <- apply(antiD1,2,sd)
+cvAntiD1 <- meanAntiD1/stdAntiD1
+antiD1 <- t(data.frame("mean"=meanAntiD1,"sd"=stdAntiD1,"cv"=cvAntiD1))
+summary <- rbind(summary,antiD1[,1])
+summary <- rbind(summary,antiD1[,4])
+kable(antiD1)
+
+antiD1 <- as.data.frame(t(antiD1))
+ggplot(antiD1) + geom_point(aes(x=N,y=meanAntiD1,label="mean")) + 
+  geom_hline(yintercept=0.1,color="red") + 
+  geom_text(aes(2000,0.1,label = "E[c(x)] = 0.1", vjust = -1)) + 
+  scale_x_continuous(breaks=N) + 
+  ggtitle("Mean of 100 estimates at D=1 and N samples")  
+
+ggplot(antiD1) + geom_point(aes(x=N,y=stdAntiD1,label="standard deviation")) +  
+  scale_x_continuous(breaks=N) + 
+  ggtitle("Standard Deviation of 100 estimates at D=1 and N samples") 
+```
+
+```{r}
+antiD2 <- matrix(data=NA, nrow=100, ncol=length(N))
+colnames(antiD2) <- N
+rownames(antiD2) <- 1:100
+for(i in 1:length(N)){
+  for (j in 1:100){
+    antiD2[j,i] <- EXanti(2,N[i]) # D = 2
+  }
+}
+meanAntiD2 <- apply(antiD2,2,mean) 
+stdAntiD2 <- apply(antiD2,2,sd)
+cvAntiD2 <- meanAntiD2/stdAntiD2
+antiD2 <- t(data.frame("mean"=meanAntiD2,"sd"=stdAntiD2,"cv"=cvAntiD2))
+summary <- rbind(summary,antiD2[,1])
+summary <- rbind(summary,antiD2[,4])
+kable(antiD2)
+
+antiD2 <- as.data.frame(t(antiD2))
+ggplot(antiD2) + geom_point(aes(x=N,y=meanAntiD2,label="mean")) + 
+  geom_hline(yintercept=0.1,color="red") + 
+  geom_text(aes(2000,0.1,label = "E[c(x)] = 0.1", vjust = -1)) + 
+  scale_x_continuous(breaks=N) + 
+  ggtitle("Mean of 100 estimates at D=1 and N samples")  
+
+ggplot(antiD2) + geom_point(aes(x=N,y=stdAntiD2,label="standard deviation")) +  
+  scale_x_continuous(breaks=N) + 
+  ggtitle("Standard Deviation of 100 estimates at D=1 and N samples")
+```
+
+d) Latin Hypercube Sampling
+---------------------------
+
+```{r}
+library(lhs)
+EXlatin <- function(D,N){
+  c <- numeric(N)
+  x <- randomLHS(N,D)
+  x <- (x*10)-5 
+  if (D==1){for (i in 1:N){c[i] <- exp(-0.5*sum(t(x[i])*x[i]))/((2*pi)^(D/2))}}
+  else if (D > 1){for (i in 1:N){c[i] <- exp(-0.5*sum(t(x[i,])*x[i,]))/((2*pi)^(D/2))}}
+  mean(c)
+}
+
+latinD1 <- matrix(data=NA, nrow=100, ncol=length(N))
+colnames(latinD1) <- N
+rownames(latinD1) <- 1:100
+for(i in 1:length(N)){
+  for (j in 1:100){
+    latinD1[j,i] <- EXlatin(1,N[i]) # D = 1
+  }
+}
+meanLatinD1 <- apply(latinD1,2,mean) 
+stdLatinD1 <- apply(latinD1,2,sd)
+cvLatinD1 <- meanLatinD1/stdLatinD1
+latinD1 <- t(data.frame("mean"=meanLatinD1,"sd"=stdLatinD1,"cv"=cvLatinD1))
+summary <- rbind(summary,latinD1[,1])
+summary <- rbind(summary,latinD1[,4])
+kable(latinD1)
+
+latinD1 <- as.data.frame(t(latinD1))
+ggplot(latinD1) + geom_point(aes(x=N,y=meanLatinD1,label="mean")) + 
+  geom_hline(yintercept=0.1,color="red") + 
+  geom_text(aes(2000,0.1,label = "E[c(x)] = 0.1", vjust = -1)) + 
+  scale_x_continuous(breaks=N) + 
+  ggtitle("Mean of 100 estimates at D=1 and N samples")  
+
+ggplot(latinD1) + geom_point(aes(x=N,y=stdLatinD1,label="standard deviation")) +  
+  scale_x_continuous(breaks=N) + 
+  ggtitle("Standard Deviation of 100 estimates at D=1 and N samples") 
+
+latinD2 <- matrix(data=NA, nrow=100, ncol=length(N))
+colnames(latinD2) <- N
+rownames(latinD2) <- 1:100
+for(i in 1:length(N)){
+  for (j in 1:100){
+    latinD2[j,i] <- EXlatin(2,N[i]) # D = 2
+  }
+}
+meanLatinD2 <- apply(latinD2,2,mean) 
+stdLatinD2 <- apply(latinD2,2,sd)
+cvLatinD2 <- meanLatinD2/stdLatinD2
+latinD2 <- t(data.frame("mean"=meanLatinD2,"sd"=stdLatinD2,"cv"=cvLatinD2))
+summary <- rbind(summary,latinD2[,1])
+summary <- rbind(summary,latinD2[,4])
+kable(latinD2)
+
+latinD2 <- as.data.frame(t(latinD2))
+ggplot(latinD2) + geom_point(aes(x=N,y=meanLatinD2,label="mean")) + 
+  geom_hline(yintercept=0.01,color="red") + 
+  geom_text(aes(2000,0.01,label = "E[c(x)] = 0.01", vjust = -1)) + 
+  scale_x_continuous(breaks=N) + 
+  ggtitle("Mean of 100 estimates at D=1 and N samples")  
+
+ggplot(latinD2) + geom_point(aes(x=N,y=stdLatinD2,label="standard deviation")) +  
+  scale_x_continuous(breaks=N) + 
+  ggtitle("Standard Deviation of 100 estimates at D=1 and N samples") 
+```
+
+f) Summary
+----------
+
+
+
+```{r}
+colnames(summary) <- c("mean","sd","cv")=
+summary["n"] <- rep(c("1000","4000"),8)
+summary["type"] <- c(rep(c("monte"),4),rep(c("sobol"),4),rep(c("anti"),4),rep(c("latin"),4))
+summary["d"] <- rep(c(1,1,2,2),4)
+D1frame <- subset(summary,d==1)
+D2frame <- subset(summary,d==2)
+ggplot(D1frame,aes(x=n,y = mean,color=type)) + geom_point() + ggtitle("E[c(x)] at D=1")
+ggplot(D2frame,aes(x=n,y = mean,color=type)) + geom_point() + ggtitle("E[c(x)] at D=2")
+ggplot(D1frame,aes(x=n,y = sd,color=type)) + geom_point() + ggtitle("Standard Deviation at D=1")
+ggplot(D2frame,aes(x=n,y = sd,color=type)) + geom_point() + ggtitle("Standard Deviation at D=2")
+```
+
+It appears that all of the methods, save Sobol, closely approximate the analytical value of $E[c(x)]=0.1$ at $D=1$. At the same time, the antithetic approach and Monte Carlo approach had the highest variation, but did decrease significantly from $n=1000$ to $n=4000$. At $D=2$, the Monte Carlo method was closesly to the analytical value of $E[c(x)]=0.01$, although it demonstrated higher variation that the Latin Hypercube and Sobol methods. The variance reduction methods seem strong for all of the methods, although Sobol seems to demonstrate the least variation. All of the methods show rapidly decreasing variation as the value of $N$ increases.
+
+Exercises from $\textit{Statistical\:Computing\:with\:R}$
+
+6.3
+---
+
+Plot the power curves for the t-test in Example 6.9 for sample sizes 10, 20, 30, 40, and 50, but omit the standard error bars. Plot the curves on the same graph, each in a different color or different line type, and include a legend.
+Comment on the relation between power and sample size.
+
+```{r}
+powercurve <- function(n){
+m <- 1000
+mu0 <- 500
+sigma <- 100
+mu <- c(seq(450, 650, 10)) #alternatives
+M <- length(mu)
+power <- numeric(M)
+  for (i in 1:M) {
+    mu1 <- mu[i]
+    pvalues <- replicate(m, expr = {
+  #simulate under alternative mu1
+      x <- rnorm(n, mean = mu1, sd = sigma)
+      ttest <- t.test(x,
+      alternative = "greater", mu = mu0)
+      ttest$p.value } )
+  power[i] <- mean(pvalues <= .05)
+  }
+ power
+}
+powerCurves <- data.frame(mu,"ten"=powercurve(10),"twenty"=powercurve(20),"thirty"=powercurve(30),"forty"=powercurve(40),"fifty"=powercurve(50))
+ggplot(powerCurves,aes(x=mu, y = value, color = variable)) + 
+  geom_line(aes(x=mu,y=ten,colour="ten")) + 
+  geom_line(aes(x=mu,y=twenty,colour="twenty")) + 
+  geom_line(aes(x=mu,y=thirty,colour="thirty")) + 
+  geom_line(aes(x=mu,y=forty,colour="forty")) + 
+  geom_line(aes(x=mu,y=fifty,colour="fifty")) 
+```
+
+The power curves are all similarly shaped - for each of the sample size the power of the curve, or the rejecting probability of rejecting $H_{O}$ given that the true value of the parameter is $\Theta$, is quite low fpr $mu < 500$. When $mu > 500$, the power increases more rapidly, the larger the sample size becomes. If we prefer to reduce Type II error, then we would want to pick the curve with the highest power, which is based on a sample size of 50. 
+
+6.4
+---
+
+Suppose that $X_{1},...,X_{n}$ are a random sample from a lognormal distribution with unknown parameters. Construct a 95% confidence interval for the parameter $\mu$. Use a Monte Carlo method to obtain an empirical estimate of the confidence level.
+
+
+7.1
+---
+
+Compute a jackknife estimate of the bias and the standard error of the correlation statistic in Example 7.2.
+
+Jackknife estimate of bias:
+
+```{r}
+library(bootstrap)
+n <- nrow(law)
+lsat <- law$LSAT
+gpa <- law$GPA
+theta.hat <- mean(lsat) / mean(gpa)
+print (theta.hat)
+theta.jack <- numeric(n)
+for (i in 1:n)
+theta.jack[i] <- mean(lsat[-i]) / mean(gpa[-i])
+bias <- (n - 1) * (mean(theta.jack) - theta.hat)
+print(bias) #jackknife estimate of bias
+```
+
+Jackkknife estimate of standard error:
+
+```{r}
+se <- sqrt((n-1) *
+mean((theta.jack - mean(theta.jack))^2))
+print(se)
+```
+
+7.4
+---
+
+Refer to the air-conditioning data set aircondit provided in the boot package. The 12 observations are the times in hours between failures of airconditioning equipment [63, Example 1.1]:
+
+$$3, 5, 7, 18, 43, 85, 91, 98, 100, 130, 230, 487$$
+
+Assume that the times between failures follow an exponential model $Exp(\lambda)$. Obtain the MLE of the hazard rate $\lambda$ and use bootstrap to estimate the bias and standard error of the estimate.
+
+To get the MLE of the failure rate in the exponential distribution, we can divide the number of failures by the total elapsed time.
+
+$$\lambda\^{} = \frac{r}{\sum\limits_{i=1}^r t_{i} + (n-r)T}$$
+
+Our MLE for $\lambda$ is:
+
+```{r}
+library(boot)
+length(aircondit$hours)/sum(aircondit$hours)
+```
+
+Our bootstraph estimate for the standard error of the estimate is:
+
+```{r}
+B <- 200
+n <- 12
+R <- numeric(B)
+for (b in 1:B) {
+i <- sample(1:n, size = n, replace = TRUE)
+hours <- aircondit$hours[i]
+R[b] <- length(hours)/sum(hours)
+}
+print(se.R <- sd(R))
+```
+
+Our bootstraph estimate for the bias of the estimate is:
+
+```{r}
+theta.hat <- 0.00925212
+B <- 2000 
+n <- 12
+theta.b <- numeric(B)
+for (b in 1:B) {
+i <- sample(1:n, size = n, replace = TRUE)
+hours <- aircondit$hours[i]
+theta.b[b] <- length(hours)/sum(hours)
+}
+bias <- mean(theta.b - theta.hat)
+bias
+```
+
+
+

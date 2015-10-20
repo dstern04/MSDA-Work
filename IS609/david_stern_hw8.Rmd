@@ -1,0 +1,90 @@
+---
+title: "IS 609 Week 8"
+author: "David Stern"
+date: "October 17, 2015"
+output: pdf_document
+---
+
+Page 347: #4
+------------
+
+We have engaged in a business venture. Assume the probability of success is P(s) = $\frac{2}{5}$; further assume that if we are successful we make $55,000, and if we are unsuccessful we lose $1,750. Find the expected value of the business venture.
+
+$$E = \frac{2}{5}\cdot 55,000 + \frac{3}{5}\cdot -1,750 = 20,950$$
+    
+Page 347: #6 
+------------
+
+Consider a firm handling concessions for a sporting event. The firm’s manager needs to know whether to stock up with coffee or cola and is formulating policies for specific weather predictions. A local agreement restricts the firm to selling only one type of beverage. The firm estimates a $1,500 profit selling cola if the weather is cold and a $5,000 profit selling cola if the weather is warm. The firm also estimates a $4,000 profit selling coffee if it is cold and a $1,000 profit selling coffee if the weather is warm. The weather forecast says that there is a 30% of a cold front; otherwise, the weather will be warm. Build a decision tree to assist with the decision. What should the firm handling concessions do?
+
+Our "tree" for this model will start with the decision to stock coffee or cola. The decision can be made based on which beverage has a higher expected profit. There are two outcomes for each beverage decision, based on the weather.
+
+$$EX[Cola] = 0.3 \cdot 1500 + 0.7 \cdot 5000 = 3950$$
+$$EX[Coffee] = 0.3 \cdot 4000 + 0.7 \cdot 1000 = 1900$$
+
+The expected profit from Cola is more than double that of Coffee. The firm should decide to stock Cola. 
+
+Page 355: #3
+------------
+
+The financial success of a ski resort in Squaw Valley is dependent on the amount of early snowfall in the fall and winter months. If the snowfall is greater than 40 inches, the resort always has a successful ski season. If the snow is between 30 and 40 inches, the resort has a moderate season, and if the snowfall is less than 30 inches, the season is poor, and the resort will lose money. The seasonal snow probabilities from the weather service are displayed in the following table with the expected revenue for the previous 10 seasons. A hotel chain has offered to lease the resort during the winter for $100,000. You must decide whether to operate yourself or lease the resort. Build a decision tree to assist in the decision.
+
+```{r}
+suppressWarnings(suppressMessages(library(knitr)))
+snow <- data.frame(p1=c(280000,100000),p2=c(100000,100000),p3=c(-40000,100000))
+colnames(snow) <- c("Snow >= 40,p=0.4","Snow 30-40, p=0.2","Snow <= 30, p=0.4")
+rownames(snow) <- c("Financial return if we operate","Lease")
+kable(snow)
+```
+
+We will decide whether to operate or lease based on the expected profit from each.
+
+$$EX[Lease] = 0.4 \cdot 100,000 + 0.2 \cdot 100,000 + 0.4 \cdot 100,000 = 100,000$$
+$$EX[Operate] = 0.4 \cdot 280,000 + 0.2 \cdot 100,000 + 0.4 \cdot -40,000 = 116,000$$
+
+Based on the expected profits, we should decide to operate the ski resort.
+
+Page 364: #3
+------------
+
+A big private oil company must decide whether to drill in the Gulf of Mexico. It costs $1 million to drill, and if oil is found its value is estimated at $6 million. At present, the oil company believes that there is a 45% chance that oil is present. Before drilling begins, the big private oil company can hire a geologist for $100,000 to obtain samples and test for oil. There is only about a 60% chance that the geologist will issue a favorable report. Given that the geologist does issue a favorable report, there is an 85% chance that there is oil. Given an unfavorable report, there is a 22% chance that there is oil. Determine what the big private oil company should do.
+
+In order to decide whether or not to hire a geologist before drilling, we will break down the branches of our decision tree.
+
+$$EX[Drilling, without\:report] = 0.45\cdot(6,000,000 - 1,000,000) + 0.55\cdot -1,000,000 = 1,700,000$$
+$$EX[Drilling, with\:favorable\:report] = 0.85\cdot (6,000,000 - 1,000,000 - 100,000) + 0.15\cdot(-1,000,000-100,000) = 4,000,000$$
+$$EX[Drilling, with\:unfavorable\:report] = 0.22\cdot(6,000,000 - 1,000,000 - 100,000) + 0.78\cdot (-1,000,000-100,000) = 220,000$$
+$$EX[Drilling, with\:report] = 0.6\cdot4,000,000 + 0.4\cdot220,000 = 2,488,000$$
+
+The expected profit is higher if we decide to hire the geologist for the initial report than if we drill without it.
+
+Page 373: #1
+------------
+
+Given the following payoff matrix, show all work to answer parts (a) and (b).
+
+```{r}
+state <- data.frame(p1=c(1100,850,700),p2=c(900,1500,1200),p3=c(400,1000,500),p4=c(300,500,900))
+colnames(state) <- c("1,p=0.35","2, p=0.3","3, p=0.25","4, p=0.1")
+rownames(state) <- c("A","B","C")
+kable(state)
+```
+
+a. Which alternative do we choose if our criterion is to maximize the expected value?
+
+$$EX[A] = 0.35\cdot1100 + 0.3\cdot900 + 0.25\cdot400 + 0.1\cdot300 = 785$$
+$$EX[B] = 0.35\cdot850 + 0.3\cdot1500 + 0.25\cdot1000 + 0.1\cdot500 = 1047.5$$
+$$EX[C] = 0.35\cdot700 + 0.3\cdot1200 + 0.25\cdot500 + 0.1\cdot900 = 820$$
+
+If we want to maximize the expected value, we should should choose B.
+
+b. Find the opportunity loss (regret) table and compute the expected opportunity loss (regret) for each alternative. What decision do you make if your criterion is to minimize expected regret?
+
+```{r}
+regret <- data.frame(p1=c(0,250,400),p2=c(600,0,300),p3=c(600,0,500),p4=c(300,500,900),r=c(600,400,500))
+colnames(regret) <- c("1,p=0.35","2, p=0.3","3, p=0.25","4, p=0.1","Maximum Regret")
+rownames(regret) <- c("A","B","C")
+kable(regret)
+```
+
+If we want to minimize the maximum regret, we should choose B.
