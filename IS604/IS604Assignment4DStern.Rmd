@@ -2,13 +2,13 @@
 title: "IS 604 Assignment 4"
 author: "David Stern"
 date: "October 15, 2015"
-output: html_document
+output: pdf_document
 ---
 
 1. In this problem, we will implement and investigate a series of variance reduction procedures for Monte Carlo methods by estimating the expected value of a cost function $c(x)$ which depends on a $D$-dimensional random variable $x$.
 
 $$c(x) = \frac{1}{(2\pi)^{\frac{D}{2}}}e^{-\frac{1}{2}x^{T}x}$$
-$$x_{i} \~ U(-5,5)\:for\:i=1..D$$
+$$x_{i} ~ U(-5,5)\:for\:i=1..D$$
 $$Analytically,\:E[c(x)] = (\frac{1}{10})^{D}$$
 
 That is, $x$ is a $D$-dimensional random variable (i.e., a $D \times 1$ column vector) and each component of
@@ -350,7 +350,7 @@ f) Summary
 
 
 ```{r}
-colnames(summary) <- c("mean","sd","cv")=
+colnames(summary) <- c("mean","sd","cv")
 summary["n"] <- rep(c("1000","4000"),8)
 summary["type"] <- c(rep(c("monte"),4),rep(c("sobol"),4),rep(c("anti"),4),rep(c("latin"),4))
 summary["d"] <- rep(c(1,1,2,2),4)
@@ -392,6 +392,7 @@ power <- numeric(M)
   }
  power
 }
+mu <- c(seq(450, 650, 10)) 
 powerCurves <- data.frame(mu,"ten"=powercurve(10),"twenty"=powercurve(20),"thirty"=powercurve(30),"forty"=powercurve(40),"fifty"=powercurve(50))
 ggplot(powerCurves,aes(x=mu, y = value, color = variable)) + 
   geom_line(aes(x=mu,y=ten,colour="ten")) + 
@@ -449,7 +450,7 @@ Assume that the times between failures follow an exponential model $Exp(\lambda)
 
 To get the MLE of the failure rate in the exponential distribution, we can divide the number of failures by the total elapsed time.
 
-$$\lambda\^{} = \frac{r}{\sum\limits_{i=1}^r t_{i} + (n-r)T}$$
+$$\lambda^{} = \frac{r}{\sum\limits_{i=1}^r t_{i} + (n-r)T}$$
 
 Our MLE for $\lambda$ is:
 
