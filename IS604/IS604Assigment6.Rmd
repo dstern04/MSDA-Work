@@ -1,0 +1,68 @@
+---
+title: "IS 604 Assignment 6"
+author: "David Stern"
+date: "November 12, 2015"
+output: word_document
+---
+
+6.1 
+---
+
+A tool crib has exponential interarrival and service times and servers a very large group of mechanics. The mean time between arrivals is 4 minutes. It takes 3 minutes on the average for a tool-crib attendant to service a mechanic. The attendant is paid $10 per hour and the mechanic is paid $15 per hour. Would it be advisable to have a second tool-crib attendant?
+
+To answer this question, we must compare the costs of each scenario. Hiring the attendants costs $10/hour/server. The costs of the mechanics waiting in line is less straight-forward. With an arrival rate of $\hat{\lambda}$ mechanics per hour, the average cost per hour is: $15 \cdot \hat{\lambda}\hat{w_{Q}}$.
+
+$$\lambda = 15$$
+$$\mu = 20$$
+$$\rho = \frac{\lambda}{\mu} = \frac{15}{20}$$
+
+For an $M/M/1$ queue, $\hat{w_{Q}} = \frac{\rho}{\mu (1- \rho)}$.
+
+$$\hat{w_{Q}} = \frac{0.75}{20 \cdot 0.25} = 0.15$$
+
+The cost per hour of having one server is:
+
+$$Mechanic\:Cost = 15 \cdot 15 \cdot 0.15 = 33.75$$
+$$Attendant\:Cost = 10$$
+$$Total\:Cost = 43.75$$
+
+For an $M/M/c$ queue, $\hat{w_{Q}} = w - \frac{1}{\mu}$, where:
+
+$$w = \frac{L}{\lambda}$$
+$$L = c\rho + \frac{\rho P(L(\infty) \geq c)}{1 - \rho}$$
+$$P(L(\infty) \geq c) = \frac{(cp)^{c}P_{0}}{c!(1-\rho)}$$
+$$P_{0} = \{\Big[\sum_{n=0}^{c-1} \frac{(c\rho)^{n}}{n!}\Big] + \Big[(cp)^{c}(\frac{1}{c!})\frac{1}{1-\rho}\Big]\}^{-1}$$
+
+For $c = 2$, we can work backwards to get $\hat{w_{Q}}$:
+
+$$P_{0} = \Big[0.75 + (2 \cdot 0.75)^{2}(\frac{1}{2!})(\frac{1}{1-0.75})\Big]^{-1} = \frac{4}{21}$$
+$$P(L(\infty) \geq c) = \frac{(2 \cdot 0.75)^{2}\cdot\frac{4}{21}}{2!(1-0.75)} = 0.4285714$$
+$$L = 2\cdot 0.75 + \frac{0.75 \cdot 0.4285714}{1 - 0.75} = 2.785714$$
+$$w = \frac{2.785714}{15} = 0.1857143$$
+$$\hat{w_{Q}} = 0.1857143 - \frac{1}{20} = 0.1357143$$
+
+The cost per hour of having two servers is:
+
+$$Mechanic\:Cost = 15 \cdot 15 \cdot 0.1357143 = 30.54$$
+$$Attendant\:Cost = 20$$
+$$Total\:Cost = 50.54$$
+
+It appears that the cost of having two servers exceeds the cost of one. It would not be advisable to hire a second tool-crib attendant.
+
+6.2
+---
+
+A two-runway (one runway for landing, one runway for taking off) airport is being designed for propeller-driven aircraft. The time to land an airplane is known to be exponentially distributed, with a mean of 1.5 minutes. If airplane arrivals are assumed to occur at random, what arrival rate can be tolerated if the average wait in the sky is not to exceed 3 minutes?
+
+For this problem, we are only modeling the landing process, so with one runway, we will use the steady-state parameters of the $M/M/1$ queue. The average wait for this queue is:
+
+$$\hat{w_{Q}} = \frac{\lambda}{\mu(\mu-\lambda)}$$
+$$\mu = \frac{1}{1.5} = \frac{2}{3}$$
+
+If the average wait is not to exceed three minutes, then we find the maximum $\lambda$ at $\hat{w_{Q}} = 3$.
+
+$$\frac{\lambda}{\frac{2}{3}(\frac{2}{3} - \lambda)} = 3$$
+$$\lambda = \frac{4}{9}$$
+
+The maximum arrival rate is $lambda = \frac{4}{9}$, or one arrival every 2.25 minutes.
+

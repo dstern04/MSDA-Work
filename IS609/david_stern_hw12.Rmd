@@ -1,0 +1,91 @@
+---
+title: "IS 609 Assignment 12"
+author: "David Stern"
+date: "November 14, 2015"
+output: pdf_document
+---
+
+Page 576: #2
+------------
+
+Allowing back ordering is a good strategy if the storage costs are known to exceed the costs of stock-outs. If we calculate storage costs by integrating the area under the curve for one cycle, it is easy to see that shifting the curve downward - the reverse of allowing a buffer stock - will storage costs by decreasing the area. We should assume that costs are assigned to stock-outs, or unsatsified demand, as that is likely to decrease customer loyalty and risks losing business in the short and long-term to competitors. 
+
+Model 13.7 assumes the entire inventory is used up in each cycle and that demand is met immediately when items are in stock, but not when they are out-of-stock. The model makes the assumption that demand will be constant over multiple cycles and will not be negatively affected by the stock-outs. We can determine the percentage of time an item is unfilled by taking a cycle $t$ and comparing the interval that $Q \leq 0$ to the interval that $Q > 0$. 
+
+We can determine the loss-of-good-will cost, $w$, of a stock-out by adapting the storage-cost formula. To find the cost of a stock out, we multiply the $w$ by the average daily invetory and the number of days of the stock-out. Where $t^{*}$ is the day the stock hits zero:
+
+$$loss\:of\:good\:will\:cost = \frac{wq(t-t^{*})}{2}$$
+$$cost\:per\:cycle = d + \frac{sqt^{*}}{2} + \frac{wq(t-t^{*})}{2}$$
+
+To find the average daily cost, we divide by $t$. Since the time the stock hits zero is unknown, we will replace the resulting proportions, $\frac{t^{*}}{t}$ with $a$ and $\frac{t - t^{*}}{t}$ with $(1 - a)$.
+
+$$c = \frac{d}{t} + at\frac{sq}{2} + (1-a)t\frac{wq}{2}$$
+
+Sub $q = rt$:
+
+$$c = \frac{d}{t} + a\frac{srt}{2} + (1-a)\frac{wrt}{2}$$
+
+Differentiate $c$ with respect to $t$:
+
+$$c' = \frac{-d}{t^{2}} + a\frac{sr}{2} + (1-a)\frac{wr}{2} = 0$$
+
+Our critical point, is: 
+
+$$T^{*} = \sqrt{\frac{2d}{asr + (1-a)wr}}$$.
+
+Since the optimal order quantity is $Q^{*} = rT^{*}$,
+
+$$Q^{*} = r\sqrt{\frac{2d}{asr + (1-a)wr}}$$
+
+As we can see, the optimal quantity depends in part on the proportion of time that the item is in-stock, $a$ versus out-of-stock $a-1$. Before running a system that allows stock-outs, we should know this proportion, as well as the the ratio of storage costs to loss-of-good-costs, $s:w$. Both are needed to determine the feasibility of the operation.
+   
+Page 585: #2
+------------
+
+Fine the local minimum value of the function:
+
+$$f(x,y) = 3x^{2} + 6xy + 7y^{2} - 2x + 4y$$
+
+$$\frac{df}{dx} = 6x + 6y - 2 = 0$$
+$$\frac{df}{dy} = 6x + 14y + 4 = 0$$
+
+Solve for $x$ and $y$:
+
+$$6x + 6y - 2 = 6x + 14y + 4$$
+$$6y - 2 = 14y + 4$$
+$$-8y = 6$$
+$$y = -\frac{3}{4}$$
+$$x = \frac{26}{24}$$
+
+We can confirm that this is a minimum by checking that the second derivatives are positive:
+
+$$\frac{df^{2}}{dx^{2}} = 6$$
+$$\frac{df^{2}}{dy^{2}} = 14$$
+
+Page 591: #5
+
+Using the method of Lagrange multipliers, find the hottest point $(x,y,z)$ along the elliptical orbit:
+
+$$4x^{2} + y^{2} + 4z^{2} = 16$$
+
+Where the temperature function is:
+
+$$T(x,y,z) = 8x^{2} + 4yz - 16z + 600$$ 
+
+$$L(x,y,z,\lambda) = 8x^{2} + 4yz - 16z + 600 -\lambda(4x^{2} + y^{2} + 4z^{2} - 16)$$
+
+$$\frac{dl}{dx} = 16x - 8x\lambda = 0$$
+$$\lambda = 2$$
+$$\frac{dl}{dz} = 4y - 16 - 4\lambda = 0$$
+$$y = 6$$
+$$\frac{dl}{dy} = 4z - 2y\lambda = 0$$
+$$4z = 2y\lambda$$
+$$z = 6$$
+$$\frac{dl}{d\lambda} = 4x^{2} + y^{2} + 4z - 16 = 0$$
+$$4x^{2} + 36 + 24 - 16 = 0$$
+$$4x^{2} = -44$$
+$$x = \sqrt{-11}$$
+
+The hottest point is $f(\sqrt{-11},6,6)$. We can check this is a maximum (hottest temperature) by making sure one of the second derivatives is negative.
+
+$$\frac{dl^{2}}{dy^{2}} = -2\lambda = -12$$
