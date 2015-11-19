@@ -1,3 +1,5 @@
+__author__      = "David Stern"
+
 import scipy.ndimage as ndimage
 import scipy.misc as misc
 import matplotlib.pyplot as plt
@@ -7,7 +9,7 @@ import pandas as pd
 import Tkinter
 import tkFileDialog
 
-"""
+
 # Objects Plot
 
 objectsRaw = 'https://raw.githubusercontent.com/dstern04/MSDA-Work/master/IS602/objects.png'
@@ -78,6 +80,16 @@ plt.ylim(ymin=0)
 plt.xlim(xmin=0)
 plt.show()
 
-"""
 
+# Server Requests Plot
 
+hours = range(0,24)
+requests = [684,434,399,248,347,374,303,846,1994,3075,3209,3820,3827,4391,4716,4284,4042,2793,1820,1493,1310,1015,1117,1186]
+
+plt.plot(hours, requests, '-o')
+plt.title('HTTP Requests by Hour')
+plt.xlabel('time')
+plt.ylabel('Number of Requests')
+plt.xticks(range(0,24))
+plt.xlim(xmax=24)
+plt.show()
