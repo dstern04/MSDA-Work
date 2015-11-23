@@ -1,0 +1,91 @@
+---
+title: "David Stern IS 605 Assignment 6"
+output: html_document
+---
+
+Problem Set 1
+==================================================
+
+1. If you roll a 6-sided die three times, there are $6^{3}=216$ possible outcomes.
+2. The probability of rolling two dice and getting a sum of 3 is equal to:
+$$
+\frac{outcomes}{sample space}=\frac{\{1,2\},\{2,1\}}{6^{2}}=\frac{2}{36} = 0.0556
+$$
+3. The probability of a shared birthday among a group of people is equal to one minus the complement, the probability that noone in the group shares a birthday. For two people, the probability of sharing a birthday is 1 - $\frac{364}{365}=\frac{1}{365}$ because the second person can have a birthday on 364 possible days that aren't also the first person's birthday. We can continue this logic and determine that a third person has to have a birthday on any of 363 days, a fourth on any of 362 days and so on.
+$$
+P(B) = 1 - P(B^{c})
+$$
+$$
+P(B^{c}) = \frac{364}{365}\times\frac{363}{365}\times\frac{362}{365}\times ... \times\frac{365 - (n-1)}{365} = \prod_{i=1}^{n-1}\ (1-\frac{i}{365})
+$$
+$$
+P(B) = 1 - \prod_{i=1}^{n-1}\ (1-\frac{i}{365})
+$$
+With 25 randomly-selected individuals, the probability that two share a birthday is:
+$$
+P(25) = 1 - \prod_{i=1}^{24}\ (1-\frac{i}{365}) = 0.569
+$$
+The probability has already exceeded fifty-percent!
+$$
+P(50) = 1 - \prod_{i=1}^{49}\ (1-\frac{i}{365}) = 0.970
+$$
+There is a 97% probability of a shared birthday among 50 randomly-selected individuals!
+
+Problem Set 2
+==================================================
+
+The following exercise will create two R functions: 
+
+allProbs - This function will take a file as input and return the probabilities of each word in the document.
+
+detectTwo - This function will take a file and two words as input. It will return a matrix of the distinct probability of the occurence of each word as well as the adjacency of the two - the probability that the two words occur together, in either order.
+
+
+```{r,tidy=TRUE}
+allProbs <- function(x){
+  text <- scan(x, character(0),quote=NULL)
+  output <- tolower(gsub("[^[:alnum:][:space:]]", "", text))
+  return(table(output)/length(output))
+}
+```
+Now we can run the function by specifying the text file:
+
+```{r}
+P <- allProbs("/Users/davidstern/assign6.sample.txt")
+head(P,100)
+```
+
+Let's make sure all the probabilities add up to 1:
+
+```{r}
+sum(allProbs("/Users/davidstern/assign6.sample.txt"))
+```
+
+The following function will take a document and two words as input and return the probability of each of the words alone, as well as "adjacency" - the probability of them occuring together.
+
+```{r,tidy=TRUE}
+detectTwo <- function(doc,word1,word2){
+  text <- scan(doc, character(0),quote=NULL) # Splits text into words
+  output <- tolower(gsub("[^[:alnum:][:space:]]", "", text)) 
+  #  ^ Removes punctuation and keeps alphanumeric characters and spaces
+  totals <- table(output)/length(output) # stores probabilities of each word
+  word1 <- as.character(word1) # converts word1/word2 inputs to character types
+  word2 <- as.character(word2)
+  count <- 0
+  for(i in 1:length(text)){
+    if (output[i] == word1 && (output[i-1] == word2 || output[i+1] == word2))
+    { # This will count every instance where word2 precedes OR follows word1
+      count <- count + 1
+    }
+  } # Now we will print our results in a tidy matrix
+  results <- as.matrix(c(totals[word1],totals[word2],count/length(text)),byrow=TRUE)
+  rownames(results) <- c(word1,word2,"adjacency")
+  print(t(results))
+}
+```
+
+Let's test the function with "the" and "for":
+
+```{r}
+detectTwo("/Users/davidstern/assign6.sample.txt","the","for")
+```

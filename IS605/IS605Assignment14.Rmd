@@ -1,0 +1,80 @@
+---
+title: "IS 605 Assignment 14"
+author: "David Stern"
+date: "May 10, 2015"
+output: html_document
+---
+
+In this exercise, we will use Taylor Series approximations to represent functions as an infinite sum of the function's derivatives calculated at a single point. The Taylor Series Approximations takes the following form:
+
+$$f(x) = \sum_{n=o}^\infty \frac{f^{n}(a)}{n!} (x - a)^{n} = \frac{f(a)}{0!}(x - a)^{0} + \frac{f^{1}(a)}{1!}(x - a)^{1} + \frac{f^{2}(a)}{2!}(x - a)^{2} ...  = f(a) + f^{1}(a)(x - a) + \frac{f^{2}(a)}{2!}(x - a)^{2} ...$$
+
+Where $f^{n}(a)$ is the $\textit{nth}$ derivative of f(x) at x = a.
+
+Problem 1 
+---------
+
+$$f(x) = \frac{1}{1-x}$$
+
+For this function, we should start by looking at the pattern of the derivates. 
+
+Since $$f(x) = (1 - x)^{-1}$$ 
+
+then 
+$$f^{1}(x) = (-1)(-1)(1 - x)^{-2} = \frac{1}{(1 - x)^{2}}$$ 
+$$f^{2}(x) = (-1)(-2)(1 - x)^{-3} = \frac{2}{(1 - x)^{3}}$$ 
+
+The pattern for the $\textit{nth} derivative of f(x), is:
+
+$$f^{n}(x) = \frac{n!}{(1 - x)^{n+1}}$$
+
+We can expand the proximation as follows:
+
+$$f(x) = \frac{1}{1-x} = \frac{0!(1)}{0!(1-a)} + \frac{1!(x-a)}{1!(1-a)^{2}} + \frac{2!(x-a)^{2}}{2!(1-a)^{3}} + \frac{3!(x-a)^{3}}{3!(1-a)^{4}} ...$$
+At a = 0, $$f(x) = x^{0} + x^{1} + x^{2} + x^{3} ... =  \sum_{n=o}^\infty x^{n}$$ 
+
+Problem 2 
+---------
+
+$$f(x) = e^{x}$$
+
+For this function, the pattern of the derivatives is constant. Since $\frac{d}{dx}e^{x} = e^{x}$, then $f^{n}(x)$ will be $e^{x}$ for all values of $\textit{n}$.
+
+We can expand the proximation as follows:
+
+$$f(x) = e^{x} = \frac{e^{a}}{0!} + \frac{e^{a}(x-a)^{1}}{1!} + \frac{e^{a}(x-a)^{2}}{2!} + \frac{e^{a}(x-a)^{3}}{3!} ...$$
+At a = 0, $$f(x) = \frac{x^{0}}{0!} + \frac{x^{1}}{1!} + \frac{x^{2}}{2!} + \frac{x^{3}}{3!} ...$$ 
+
+$$ f(x) = \sum_{n=o}^\infty \frac{x^{n}}{n!}$$
+
+Problem 3 
+---------
+
+$$f(x) = ln(1 + x)$$
+
+The derivative patteern for this function is somewhat more complex.
+
+The first derivative of the function is $f^{1}x = \frac{1}{1 + x}$.
+
+Each subsequent derivative follows a pattern similar the first problem:
+
+$$f^{2}x = (-1)(x+1)^{-2} = \frac{-1}{(x+1)^{2}}$$
+$$f^{3}x = (-1)(-2)(x+1)^{-3} = \frac{2}{(x+1)^{3}}$$
+$$f^{4}x = (-1)(-2)(-3)(x+1)^{-4} = \frac{-6}{(x+1)^{4}}$$
+$$f^{5}x = (-1)(-2)(-3)(-4)(x+1)^{-5} = \frac{24}{(x+1)^{5}}$$
+
+Here we should note three patterns - the first being that the numerator follows the pattern of $\texit{n} starting with the second derivative and the second being that the each subsequent derivate switches between negative and positive. To account for the first pattern, we will express the pattern in the numerator as takes the value of $\textit{n - 1!}$ and to account for the second, we will later build in $(-1)^{n+1}$ into our expansion.
+
+We expand the proximation as follows:
+
+$$f(x) = \frac{ln(1+a)}{0!} + \frac{(x - a)^{1}}{1!(1 + a)} + \frac{-1(x - a)^{2}}{2!(1 + a)^{2}} + \frac{2(x - a)^{3}}{3!(1 + a)^{3}} + \frac{-6(x - a)^{4}}{4!(1 + a)^{4}} ...$$
+
+At a = 0, we will drop ln(1 + a) from the expansion, since ln(1) = 0. We are then left with:
+
+$$ f(x) = \sum_{n=o}^\infty (-1)^{n+1}\frac{(n-1)!x^{n}}{(n!)}$$
+
+Since $n! = (n-1)! \times n$, we can simplify the sum as:
+
+$$ f(x) = \sum_{n=o}^\infty (-1)^{n+1}\frac{x^{n}}{n}$$
+
+

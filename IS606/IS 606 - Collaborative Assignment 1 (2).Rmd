@@ -1,0 +1,87 @@
+---
+title: "IS 606 - Collaborative Assignment 1"
+output: html_document
+---
+
+```{r}
+
+
+# Read in datasets
+sales <- read.csv("sales.csv", header=TRUE, stringsAsFactors=FALSE)
+details <- read.csv("details.csv", header=TRUE, stringsAsFactors=FALSE)
+
+
+# Create columns for calculating excess supply/insufficient supply 
+# for each type of sandwich
+sales["+/- ham"] <- NA
+sales["+/- turkey"] <- NA
+sales["+/- veggie"] <- NA
+
+for (i in 1:nrow(sales)) {
+  sales[i,8] <- sales[i,5] - sales[i,2] # Ham
+  sales[i,9] <- sales[i,6] - sales[i,3] # Turkey
+  sales[i,10] <- sales[i,7] - sales[i,4] # Veggie
+}
+
+
+# Create columns for calculating lost profit for days where demand 
+# was greater than supply for each type of sandwich
+
+# What I did here, was to set what the profit was per day for each type of sandwich. I used an ifelse statement
+# in order to differentiate the days where demand was exceeded from the days it was not met. For the days, that 
+# supply exceeed demand, profit is calculated as the number of sandwiches sold, times the profit for each sandwich
+# sold and less the cost of each unsold sandwich. For the "else" clause - where demand exceeded supply - we 
+# calculate the number of each sandwich sold, times the profit for each sandwich, less the foregone profit of 
+# each unit of unmet demand
+
+
+sales["hamProfit"] <- NA
+sales["turkeyProfit"] <- NA
+sales["veggieProfit"] <- NA
+
+for (j in 1:nrow(sales)) {
+  ifelse(sales["+/- ham"] >= 0,
+      sales[j,11] <- sales[j,2] * (details[1,2] - details[1,3]) - sales[j,8] * details[1,3],
+      sales[j,11] <- sales[j,5] * (details[1,2] - details[1,3]) + sales[j,8] * (details[1,2] - details[1,3])
+      )
+}
+for (j in 1:nrow(sales)) {
+  ifelse(sales["+/- turkey"] >= 0,
+         sales[j,12] <- sales[j,3] * (details[2,2] - details[2,3]) - sales[j,9] * details[2,3],
+         sales[j,12] <- sales[j,6] * (details[2,2] - details[2,3]) + sales[j,9] * (details[2,2] - details[2,3])
+  )
+}
+for (j in 1:nrow(sales)) {
+  ifelse(sales["+/- veggie"] >= 0,
+         sales[j,13] <- sales[j,4] * (details[3,2] - details[3,3]) - sales[j,10] * details[3,3],
+         sales[j,13] <- sales[j,7] * (details[3,2] - details[3,3]) + sales[j,10] * (details[3,2] - details[3,3])
+  )
+}
+
+
+# Show excess supply/insufficient supply for each type of sandwich along with lost profits
+# Positive values in "+/- ham", "+/- turkey", and "+/- veggie" columns show days with excess supply
+# Negative values in "+/- ham", "+/- turkey", and "+/- veggie" columns show days with insufficient supply
+# Zero values in "+/- ham", "+/- turkey", and "+/- veggie" columns show days where supply = demand
+# Positive values in "$ ham", "$ turkey", and "$ veggie" columns show days with excess supply 
+# Negative values in "$ ham", "$ turkey", and "$ veggie" columns show lost profit
+
+
+# I was playing around with the data to get a feel for it and figured this way you guys could see
+# what I was doing.  So far I haven't seen any patterns aside from frequent days where demand
+# for turkey and veggie sandwiches were greater than supply. I figure the next step might be to 
+# focus on how many days was demand greater than supply divided by total days for each type of 
+# sandwich and sum up total lost profit for each sandwich.
+
+profitPerHam <- aggregate(hamProfit ~ available.ham, sales, mean)
+profitPerHam["profitPerSandwich"] <- profitPerHam[,2]/profitPerHam[,1]
+profitPerTurkey <- aggregate(turkeyProfit ~ available.turkey, sales, mean)
+profitPerTurkey["profitPerSandwich"] <- profitPerTurkey[,2]/profitPerTurkey[,1]
+profitPerVeggie <- aggregate(veggieProfit ~ available.veggie, sales, mean)
+profitPerVeggie["profitPerSandwich"] <- profitPerVeggie[,2]/profitPerVeggie[,1]
+profitPerHam
+profitPerTurkey
+profitPerVeggie
+cor(profitPerHam$profitPerSandwich,profitPerHam$available.ham)
+cor(profitPerTurkey$profitPerSandwich,profitPerTurkey$available.turkey)
+cor(profitPerVeggie$profitPerSandwich,profitPerVeggie$available.veggie)

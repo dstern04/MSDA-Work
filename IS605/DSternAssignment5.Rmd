@@ -1,0 +1,121 @@
+---
+title: "IS605Assignment5"
+output: html_document
+---
+Problem Set 1
+========================================
+
+First, we will formulate functions that compute ATA and ATB
+
+```{r}
+ATA <- function(A){
+  t(A) %*% A
+}
+ATB <- function(A,B){
+  t(A) %*% B
+}
+A <- matrix(c(1,1,1,1,0,1,3,4),ncol=2)
+B <- matrix(c(0,8,8,20),ncol=1)
+
+ATA(A) # This shows a 2x2 matrix
+ATB(A,B)
+```
+
+To solve for the least square, we will need to find ATB/ATA. To do this, we will need to find the inverse of ATA. Since ATA is a 2x2 matrix, I will need to use a helper function that will find the inverse of a 2x2 matrix. 
+
+```{r}
+inv2x2 <- function(x){
+  inverse <- matrix(c(x[2,2],-1*x[2,1],-1*x[1,2],x[1,1]),ncol=2)/(x[1,1]*x[2,2]-x[1,2]*x[2,1]) 
+  print(inverse) 
+}
+# We will build this helper function into our leastSquare function
+leastSquare <- function(A,B){
+  inv2x2(ATA(A)) %*% ATB(A,B) 
+}
+```
+Our least square will be X = (1,4)
+```{r}
+leastSquare(A,B)
+```
+The squared error is equal to the square of B - A*(least square)
+```{r}
+(B - (A %*% matrix(c(1,4),ncol=1)))^2
+```
+If we exchange B for P, we will see that the error is zero:
+```{r}
+P <- matrix(c(1,5,13,17),ncol=1)
+leastSquare(A,P)
+```
+Again, the least square will be X = (1,4), but the error will equal zero:
+```{r}
+(P - (A %*% matrix(c(1,4),ncol=1)))^2
+```
+We can easily demonstrate the error by subtracting the P vector from B
+```{r}
+B - P
+```
+This is the same as B minus A times the least square:
+```{r}
+B - (A %*% matrix(c(1,4),ncol=1))
+```
+Now we will show that the error is orthagonal to P and to each of the columnns in A. To do so, we will show 
+the transpose of each of the column vectors in A multiplied by the error equals zero. Likewise for P.
+```{r}
+e <- B - P
+t(P) %*% e
+t(A[,1]) %*% e
+t(A[,2]) %*% e
+```
+Problem Set 2
+========================================
+To avoid confusion with the variables in PS1, all of the variables for this next portion will be affixed with "2"
+```{r}
+data <- read.table("auto-mpg.data",header=F)
+data <- as.matrix(data)
+A2 <- matrix(data[,1:4],ncol=4)
+B2 <- matrix(data[,5],ncol=1)
+colnames(A2) <- c("displacement","horsepower","weight","acceleration")
+colnames(B2) <- "mpg"
+```
+First, let's look at what dimensions ATA will take on, so we can best approach the calculation of its inverse:
+```{r}
+dim(ATA(A2))
+```
+Since it is a 4x4 matrix, we will use the myinverse function from Assignment 4 as a lemma:
+```{r}
+myinverse <- function(x){
+  cofactorMatrix <- matrix(rep(0,length(x)),ncol=ncol(x))
+  for (i in 1:ncol(x)) {
+    for (j in 1:nrow(x)) {
+      cofactorMatrix[i,j] <- det(x[-i,-j])*(-1)^(i+j) 
+    }
+  }
+  print(t(cofactorMatrix)/det(x)) 
+}
+```
+Now we will build a new least square function, using this inverse function:
+```{r}
+leastSquare2 <- function(A,B){
+  myinverse(ATA(A)) %*% ATB(A,B) 
+}
+
+X2 <- leastSquare2(A2,B2)
+```
+The least square function should give us the variables that make up the variables that express the best fitting 
+equation to calculate MPG in terms of the other 4 variables:
+```{r}
+X2
+```
+We can check these numbers with R's built in least square fit function:
+```{r}
+check <- lsfit(A2, B2, intercept=FALSE)
+check$coefficients
+```
+The best approximation of mpg will be: 
+ mpg = -0.030037938(displacement) + 0.157115685(horsepower) - 0.006217883(weight) + 1.997320955(acceleration)
+
+The predicted error will be e = b - Ax
+```{r}
+e2 <- B2 - (A2 %*% X2)
+head(e2)
+```

@@ -1,0 +1,114 @@
+---
+title: "IS 609 Assignment 13"
+author: "David Stern"
+date: "November 20, 2015"
+output: pdf_document
+---
+
+15.1 #4
+-------
+Discuss how you might go about validating the nuclear arms race model. What data would you collect? Is it possible to obtain the data?
+
+In order to validate the nuclear arms race model, one would need information on the three factors that define the shape of the curve that defines each countries minimum missile requirements.
+
+The minimum required missiles for Country Y is:
+
+$$y = f(x) = \frac{y_{0}}{s^{x/y}}$$
+
+The minimum required missiles for Country X is:
+
+$$x = g(y) = \frac{x_{0}}{s^{y/x}}$$
+
+Taking the variables, for country Y as an example, we would need to know: $y_{0}$, the minimum number of missile required to maintain second-strike capabilities; $s$, the survivability percentage, which is a function of the security of Y's missiles as well as the effectiveness of X's missiles, and the exchange ration $e=x/y$. To validate this model, even historically, would be an incredibly challenge due to secrecy that still remains around these weapons systems (for  example: the exact number and location of missiles as well as the peak technology each country developed). During the Cold War, both the US and USSR spent a great deal of resources trying to gain intelligence on each other's stockpile as well as technological advances. The most informative data would be the number of missile each country had over time to see if they accurately represent the shape of $f(x)$ or $g(y)$. I think even with this information, it is unlikely either nation's stockpile would faithfully reflect the shape of the curves. After all, the megatonnage of a nuclear weapon is based on analytical determinations and a country wouldn't have perfect knowledge of even their own weapons' effectiveness unless they actually tested them. The Castle Bravo test, for instance, was expected to be a 6 Mt weapon and ended up being 15 Mt!
+
+15.2 #1
+-------
+
+Build a numerical solution to Equations (15.8):
+
+$$Let\:n =\:stage$$
+$$x_{n} = number\:of\:weapons\:possessed\:by\:X\:in\:stage\:n$$ 
+$$y_{n} = number\:of\:weapons\:possessed\:by\:Y\:in\:stage\:n$$ 
+$$y_{n+1} = 120 + \frac{1}{2}x_{n}$$
+$$x_{n+1} = 60 + \frac{1}{3}y_{n}$$
+$$x_{0} = 100$$
+$$y_{0} = 200$$
+
+a. Graph your results.
+b. Is an equilibrium value reached?
+c. Try other starting values. Do you think the equilibrium value is stable?
+d. Explore other values for the survival coefficients of Countries X and Y . Describe your results.
+
+```{r}
+suppressWarnings(suppressMessages(library(knitr)))
+suppressWarnings(suppressMessages(library(ggplot2)))
+x <- c(100)
+y <- c(200)
+
+for (i in 1:20){
+  x[i+1] <- 60 + y[i]/3
+  y[i+1] <- 120 + x[i]/2
+  }
+
+unevenStart <- data.frame(n=c(0:20),x,y)
+unevenStart
+kable(unevenStart)
+
+ggplot(unevenStart) + 
+  geom_point(aes(x=n,y=x)) + 
+  ggtitle("Country X") +  
+  ylab("Number of Weapons") + 
+  xlab("Stage")
+  
+ggplot(unevenStart) + 
+  geom_point(aes(x=n,y=y)) + 
+  ggtitle("Country Y") +  
+  ylab("Number of Weapons") + 
+  xlab("Stage")
+```
+
+Here we see that an equilbirum is reached fairly quickly. The number of weapons possessed by Country X approaches 120 and Country Y approaches 180. The equilibrium appears to be very stable. If we swap the number of weapons that each country starts off with, we also reach equilbirum fairly quickly.
+
+```{r}
+x <- c(200)
+y <- c(100)
+
+for (i in 1:20){
+  x[i+1] <- 60 + y[i]/3
+  y[i+1] <- 120 + x[i]/2
+  }
+
+unevenStart <- data.frame(n=c(0:20),x,y)
+kable(unevenStart)
+```
+
+The equilbrium does depend greatly on the survival coefficients. Here we will halve the coefficient for Country X and triple it for Country Y. We see that that the system settles on an equilbirum of 157 weapons for Country X and 146 weapons for Country Y.
+
+```{r}
+x <- c(100)
+y <- c(200)
+
+for (i in 1:10){
+  x[i+1] <- 60 + y[i]/1.5
+  y[i+1] <- 120 + x[i]/6
+  }
+
+unevenStart <- data.frame(n=c(0:10),x,y)
+kable(unevenStart)
+```
+
+15.3 #4
+-------
+
+Verify the result that the marginal revenue of the $q+1st$ unit equals the price of that unit minus the loss in revenue on previous units resulting from price reduction.
+
+To do so, we will take the derivative of the Total Revenue curve. Total Revenue is defined as:
+
+$$TR(q) = P(q)\cdot(q)$$
+$$MR(q) = TR'(q) = TR(q+1) = TR(q)$$
+$$MR(q) = P(q+1)\cdot(q+1) - P(q)\cdot q$$
+$$MR(q) = P(q+1) + P(q+1)\cdot q - P(q)\cdot q$$
+$$MR(q) = P(q+1) + q\cdot (P(q+1) - P(q))$$
+$$MR(q) = P(q+1) + q \cdot \Delta p$$
+
+This last expression shows us that the the marginal revenue of the $q+1st$ unit equals the price at $q+1$ plus the product of the change in price and the new quantity. If the change in price is negative, then marginal revenue will be the new price minus the loss in revenue.

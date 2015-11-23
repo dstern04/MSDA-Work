@@ -1,0 +1,112 @@
+---
+title: "IS 605 Assignment 9"
+author: "David Stern"
+date: "March 28, 2015"
+output: html_document
+---
+
+In this assignment, we will verify Central Limit Theorem with two different probability distributions. We will start the excercise by creating functions that simulate the two distributions. These functions will take a sample size as input and return one sample set of a specified length from the distribution.
+
+$\textbf{Distribution One}$
+
+$f(x) = x, 0 \leq x \leq 1$    
+
+$f(x) = 2 - x, 1 < x \leq 2$
+
+
+```{r}
+distOne <- function(sampleSize){
+  draw <- sample(seq(0,2,by=0.01),sampleSize,replace=TRUE,
+                  prob=sapply(seq(0,2,by=0.01),function(x) { 
+                    if (x >= 0 && x <= 2) {y <- ifelse(x <=1, x, 2-x)  } else {y <- 0 }}))
+  return(draw)
+}
+
+# example set with 10 elements:
+
+distOne(10)
+```
+
+$\textbf{Distribution Two}$
+
+$f(x) = 1 - x, 0 \leq x \leq 1$    
+
+$f(x) = x - 1, 1 < x \leq 2$
+
+```{r}
+distTwo <- function(sampleSize){
+  draw <- sample(seq(0,2,by=0.01),sampleSize,replace=TRUE,
+                 prob=sapply(seq(0,2,by=0.01),function(x) { 
+                   if (x >= 0 && x <= 2) {y <- ifelse(x <=1, 1-x, x-1)  } else {y <- 0 }}))
+  return(draw)
+}
+```
+
+
+The following function will take in three parameters - sample size, the number of samples, and the distribution - and return save the sample sets in a matrix called "draws". The "dist" parameter allows the function to call any preset probability distribution function by name. The function will sample the data and store each individual "set" in a column of a matrix.
+
+```{r}
+drawSamples <- function(sampleSize,numSamples,dist){
+  draws <- dist(sampleSize*numSamples) 
+  draws <- matrix(draws,sampleSize) 
+  return(draws)
+}
+```
+
+We can see how this functions by drawing 12 samples of size 10 from the first probability distribution function:
+
+```{r}
+drawSamples(10,12,distOne)
+```
+
+Now we will draw 1000 sample sets from each distribution and plot the related histograms for each PDF. These histograms appear exactly as we would expect the shape of the distibutions to appear. We will plot the two linear functions that constitute each PDF over the range x = [0,2] in order to see how the sample values approximate the PDF.
+
+
+```{r}
+p1 <- drawSamples(10,1000,distOne)
+p2 <- drawSamples(10,1000,distTwo)
+
+hist(p1,freq=F,xlab="X",main="Histogram of First Distribution",breaks=30,las=1)
+abline(0,1,col="red")
+text(0.5,0.7,"f(x) = x")
+abline(2,-1,col="red")
+text(1.6,0.7,"f(x) = 2 - x")
+
+hist(p2,freq=F,xlab="X",main="Histogram of Second Distribution",breaks=30,las=1)
+abline(1,-1,col="red")
+text(0.6,0.7,"f(x) = x")
+abline(-1,1,col="red")
+text(1.4,0.7,"f(x) = 2 - x")
+```
+
+Now we will write a program that takes in parameters $\textit{n}$ and $\textit{dist}$ where $\textit{n}$ is the desired sample size and $\textit{dist}$ a probability distribution function. The function will draw 1000 sample sets of size $\textit{n}$ and plot the distribution of the $\textit{mean}$ of each set. We will see that for each probability distribution function, the means of the sets will be normally distribution and centered around the mean of the distribution. We will see that this verifies Central Limit Theorem even for sets with relative small sample size $\textit{n}$.
+
+```{r}
+plotPDF <- function(n,dist){
+  draws = dist(n*1000) 
+  draws = matrix(draws,n) 
+  drawMeans <- apply(draws,2,mean) # Now we calculate the mean of each sample
+  hist(drawMeans,freq=F,main=c("Sample Size",n),xlab=c("Mean of Sample Set"),breaks=30)
+}
+```
+
+$\textbf{Distribution One}$
+
+```{r}
+par(mfrow=c(2,2))
+plotPDF(5,distOne)
+plotPDF(10,distOne)
+plotPDF(10,distOne)
+plotPDF(1000,distOne)
+```
+
+
+$\textbf{Distribution Two}$
+
+```{r}
+par(mfrow=c(2,2))
+plotPDF(5,distTwo)
+plotPDF(10,distTwo)
+plotPDF(10,distTwo)
+plotPDF(1000,distTwo)
+```

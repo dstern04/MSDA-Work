@@ -1,0 +1,134 @@
+Analysis of 2014 Citibike Rides
+========================================================
+
+For this project, I decided to take a look at [CitiBike's usage data for August 2014](http://www.citibikenyc.com/system-data). In my analysis, I am not very interested in the station names, so I will subset the dataframe.
+
+```{r, echo=FALSE}
+setwd("/Users/davidstern/Documents")
+bikeData <- read.csv("2014-08 - Citi Bike trip data.csv", header=TRUE)
+```
+```{r}
+dim(bikeData) 
+colnames(bikeData) 
+```
+
+This is a massive dataset- almost 1 million observations of 15 variables!
+
+```{r}
+bikeData <- subset(bikeData, select = -c(5,9))
+```
+
+First I want to look at which variables might be better recoded or binned. The trip duration is actually in seconds, so we will convert the values in the column to minutes. 
+
+```{r}
+bikeData["tripduration"] <- round((bikeData$tripduration/60), digits=2)
+```
+
+Let's take a quick look at the distribution of ride length per rental period:
+
+```{r}
+hist(bikeData$tripduration, freq=FALSE, breaks=seq(0,100,by=5), main="Length of Ride (minutes)", na.rm=TRUE)
+```
+
+We might consider recoding the "birth.year". I think it would be useful to transform this column into approximate age and also to create a column that bins the birth years into generations, so we can see which age groups take advantage of bike-sharing. First let's create a new column "generation" that duplicates birth.year
+
+```{r}
+bikeData["generation"] <- as.numeric(as.character(bikeData$birth.year))
+```
+
+Now, we will use variable recoding to bin birth.year by generation
+
+```{r}
+attach(bikeData)
+bikeData$generation[generation >= 1985] <- "Millenial"
+bikeData$generation[generation > 1965 & generation < 1985] <- "Gen X"
+bikeData$generation[generation <= 1965 & generation > 1945] <- "Greatest Gen"
+bikeData$generation[generation <= 1945] <- "Silent Gen"
+detach(bikeData)
+```
+
+Next we should to clean up the birth.year data. We only have birth years for subscribers, not the daily or weekly customers.In the data set, these values are coded as "\\N", so we will convert them to "NA". This will allow us to remove NA values in future plots and avoid calculation errors.
+
+```{r}
+bikeData$birth.year <- as.numeric(as.character(bikeData$birth.year))
+bikeData$birth.year[bikeData$birth.year == "\\N"] <- "NA"
+sum(is.na(bikeData$birth.year))
+```
+
+There are 135932 customers rides in the dataset! Next we want to convert birth.year to approximate age and rename the column.
+
+```{r}
+bikeData$birth.year <- 2014 - as.numeric(as.character(bikeData$birth.year))
+names(bikeData)[12] <- "age"
+```
+
+Now, I want to make something useful out of the continuous variables (latitude and longitude). We are going to make a broad assumption to calculate ride distance. We are going to assume that most of these Citibike rides are in Manhattan, and that most rides on the grid will be the sum of two lines: the sum of the change in latitude and the change in longitude. Because we are summing the two changes in distance, we will not use a complicated equation to convert geodesic distance between two points on a sphere. We will use the following measurements: 
+
+1? of latitude = (about) 69.172 miles 
+
+Since longitude narrows as we approach the poles, we need a more complicated formula:
+1? of longitude = (69.172) x (cosine of the latitude)
+
+Reference: http://www.colorado.edu/geography/gcraft/warmup/aquifer/html/distance.html
+
+```{r}
+bikeData["dist.traveled"] <- round(abs(bikeData$end.station.latitude - bikeData$start.station.latitude)*69.172 + abs(bikeData$end.station.longitude - bikeData$start.station.longitude)*69.172*abs(cos(bikeData$end.station.latitude)), digits=2)
+head(dist.traveled)
+```
+
+Now we're going to add a column with the average trip speed and then subset some variables to narrow the dataframe.
+
+```{r}
+bikeData["meanTripMPH"] <- round((bikeData$dist.traveled/bikeData$tripduration)*60, digits=2)
+bikeData <- subset(bikeData, select = -c(3,5,6,8,9)) 
+head(bikeData)
+```
+
+Now we have a neat data set with a few categorical variables and a few useful continuous variables. Let's take a quick look at breakdown by generation
+
+```{r]}
+table(bikeData$generation)
+```
+
+More than half of users are Gen X'ers, with Millenials taking just over 23%. To my suprise, the percentage of users that belong to the Greatest Generation are quite high,and there are even some Silent Gen riders!
+
+```{r}
+e <- table(bikeData$generation)
+plot(e)
+# Or use a pie chart
+pie(e, labels=names(e))
+```
+
+It would also be useful to see a breakdown of usage by user type and gender, but we must first recode gender according to information provided with the dataset: Unknown=0, Male=1, Female=2. This barplot demonstrates (1) that genders of daily or weekly customers is unknown and that subscription use skews heavily male.
+
+```{r}
+bikeData$gender[gender == 0] <- "unknown"
+bikeData$gender[gender == 1] <- "male"
+bikeData$gender[gender == 2] <- "female"
+counts <- table(bikeData$usertype, bikeData$gender)
+counts
+barplot(counts, col=c("darkblue","red"), main="Citibike use by Gender and User Type", xlab=" Gender", legend = rownames(counts))
+```
+
+The next is an enormous scatter plot. There are two interesting features: 1.There are very few trips that are less than 0.1 mile and (2) the upper bound of the relationship seems to indicate there is a proportional limit to how far one can bike in a given trip duration
+
+```{r], echo=FALSE}
+require(ggplot2)
+qplot(data=bikeData, x=tripduration, y=dist.traveled, log="xy")
+```
+
+A simple histogram of Mean Trip speed shows that rides tends to fall in a very narrow range. I would surmise that anything about 40 mph is either a very athletic bike messenger or a computation error. Half of all rides average between 5.50 and 9.28 MPH. The Mean and Median. The Max speed must certainly be an error!
+
+```{r}
+boxplot(bikeData$meanTripMPH, main="Hist of Mean Trip Speed", ylab="MPH")
+summary(bikeData$meanTripMPH)
+```
+
+For trip duration, we see a similar concentrated distribution, with a number of outliers. Although these can be attributed to joyriders who take a bike out for the day and ignore the rental limit (45-60 minutes).
+
+```{r}
+boxplot(bikeData$tripduration, main="Hist of Trip Duration", ylab="Minutes")
+summary(bikeData$tripduration)
+```
+
+Since the dataset contains so many points, there aren't many clearly identifiable relationships between the variables - only clear limitations when we see max. ride distance, trip duration, and mean trip speed. We have found, however, that Citibike use is dominated by subscribers and of those subscribers, predominantly male gen X'ers.
