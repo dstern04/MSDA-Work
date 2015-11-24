@@ -1,0 +1,81 @@
+---
+title: "IS 604 Assignment 7"
+author: "David Stern"
+date: "November 23, 2015"
+output: pdf_document
+---
+
+9.14
+----
+
+Use the Kolmogorov-Smirnov test to discover whether the distribution of location of accidents is uniformly distributed for the month of September.
+
+To test for uniformity, our hypotheses are:
+
+$$H_{0}: R_{i} \sim Uniform[0,1]$$
+$$H_{A}: R_{i} \nsim Uniform[0,1]$$
+
+```{r}
+accidents <- c(88.3,91.7,98.8,32.4,20.6,76.6,40.7,67.3,90.1,87.8,
+               73.1,73.2,36.3,7.0,17.2,69.8,21.6,27.3,27.3,45.2,
+               23.7,62.6,6.0,87.6,36.8,23.3,97.4,99.7,45.3,87.2)
+accidents <- accidents/100 # scale to [0,1]
+Ri <- sort(accidents) # sort from smallest to largest
+idivn <- (1:30)/30
+dPlusVec <- idivn - Ri
+dMinusVec <-  Ri - ((1:30) - 1)/30
+dPlus <- max(dMinusVec)
+dMinus <- max(dPlusVec)
+d <- max(dMinus,dPlus)
+d
+```
+
+We will use table A.8 in the Discrete-Event System Simulation to test the critical value of $D = 0.172$ for the sample size $N=30$. 
+
+For a significance level of $\alpha = 0.10$ at $N=30$, $D_{0.10}=0.22$. Since our computed value of $D = 0.172$ is less than the critical value of $D_{0.10}=0.22$, we do not reject the null hypothesis that the accidents are uniformly distributed.
+
+9.17
+----
+
+The time required for 50 different employees to compute and record the number of hours worked during the week was measured, with the following results in minutes:
+
+```{r}
+employee <- 1:50
+minutes <- c(1.88,0.54,1.90,0.15,0.02,2.81,1.50,0.53,2.62,2.67,
+             3.53,0.53,1.80,0.79,0.21,0.80,0.26,0.63,0.36,2.03,
+             1.42,1.28,0.82,2.16,0.05,0.04,1.49,0.66,2.03,1.00,
+             0.39,0.34,0.01,0.10,1.10,0.24,0.26,0.45,0.17,4.29,
+             0.80,5.50,4.91,0.35,0.36,0.90,1.03,1.73,0.38,0.48)
+```
+
+Use the chi-square test to test the hypothesis that these service times are exponentially distributed. Let the number of class intervals be $k=6$. Use the level of significance $\alpha=0.05$. 
+
+$$H_{0} = exponentially\:distributed$$
+$$H_{A} = not\:exponentially\:distributed$$
+
+Each interval will have equal probability $p=$ `r 1/6`. To find the enpoints of these intervals we must solve for the expression below where $a_{i}$ is the endpoint of the $i$ th  interval.
+
+$$a_{i} = -\frac{1}{\lambda}ln(1-ip), i = 0,1,...6$$
+
+```{r}
+suppressWarnings(suppressMessages(library(knitr)))
+lambda <- 1/mean(minutes)
+p <- 1/6
+endpts <- c()
+for (i in 0:6){
+  endpts[i+1] <- log(1-(i*p))/-lambda
+}
+bins <- cut(minutes, breaks=endpts, labels=c("bin 1","bin 2","bin 3","bin 4"," bin 5"," bin 6"))
+Oi <- summary(bins)
+Ei <- rep(p*length(minutes),6)
+fit <- ((Oi-Ei)^2)/Ei
+intervals <- c("[0,0.220)","[0.220,0.489)","[0.489,0.836)",
+               "[0.836,1.325)","[1.325,2.161)","[2.161,inf)")
+df <- data.frame("Class Intervals"=intervals,
+                 "Observed Freq., Oi"=Oi,
+                 "Expected Freq., Ei"=Ei, 
+                 "((Oi-Ei)^2)/Ei"=fit)
+kable(df)
+```
+
+Our value for $\chi_{0}^{2}$ value is the sum of the right-most column, `r sum(fit)`. At $\alpha=0.05$ and $k-1 = 5$ degrees of freedom, $\chi_{0.05,5}^{2} = 11.1$. Since $\chi_{0}^{2} < \chi_{0.05,5}^{2}$, we do not reject the null hypothesis.

@@ -1,0 +1,69 @@
+---
+title: "IS 609 Final Project"
+author: "Cheryl Bowersox, Conor Buckley, David Stern"
+date: "November 23, 2015"
+output: pdf_document
+---
+
+Chapter 12.5, Project 1
+-----------------------
+
+Using the improved Euler’s method, approximate the solution to the predator–prey problem in Example 2. Compare the new solution to that obtained by Euler’s method using $\Delta t = 0.1$ over the interval $0 \leq t \leq 3$. Graph the solution trajectories for both solutions.
+
+$$\frac{dx}{dt} = 3x - xy$$
+$$\frac{dy}{dt} = xy - 2y$$
+$$x_{0} = 1, y_{0}=2$$
+
+```{r}
+suppressWarnings(suppressMessages(library(ggplot2)))
+x <- c(1)
+y <- c(2)
+deltaT <- 0.1
+t <- seq(0,3,by=deltaT)
+
+for (i in 1:30){
+ x[i+1] <- x[i] + (3*x[i] - x[i]*y[i])*deltaT
+ y[i+1] <- y[i] + (x[i]*y[i] - 2*y[i])*deltaT
+}
+
+df <- data.frame(t,x,y)
+
+ggplot(df) + 
+  geom_point(aes(x=x,y=y)) + 
+  ggtitle("Phase Plane for Predator-Prey Model at delta T = 0.1") + 
+  xlab("Krill (Prey)") + 
+  ylab("Whales (Predator)")
+```
+
+In this plot, we see an approximation to the solution trajectory for the predator-prey model. Starting at $(1,2)$ and moving counter-clockwise, we see that the points do not cycle back through the initial point, demonstrating that it diverges from the true solution trajectory, which is periodic. We can get a better approximation if we reduce the value of $\Delta t$. Instead of reducing the value of $\Delta t$, we will see if we can improve the accuracy of the approximation using the improved Euler's method, in which the solution trajectory is found by taking the average of the two slopes: 
+
+$$x_{n+1} = x_{n} + \left[f(t_{n},x_{n},y_{n}) + f(t_{n+1},x_{n+1}^{*},y_{n+1}^{*})\right]\frac{\Delta t}{2}$$
+$$y_{n+1} = y_{n} + \left[g(t_{n},x_{n},y_{n}) + g(t_{n+1},x_{n+1}^{*},y_{n+1}^{*})\right]\frac{\Delta t}{2}$$
+
+The values of $x_{n+1}^{*}$ and $y_{n+1}^{*}$ will be the estimates from the original Euler method above.
+
+```{r}
+xstar <- x 
+ystar <- y
+x <- c(1) # re-initialize vectors
+y <- c(2)
+deltaT <- 0.1
+t <- seq(0,3,by=deltaT)
+
+for (i in 1:30){
+ x[i+1] <- x[i] + (3*x[i] - x[i]*y[i] + 3*xstar[i] - xstar[i+1]*ystar[i+1])*deltaT/2
+ y[i+1] <- y[i] + (x[i]*y[i] - 2*y[i] + xstar[i+1]*ystar[i+1] - 2*ystar[i+1])*deltaT/2
+}
+
+df <- data.frame(t,x,y,xstar,ystar)
+
+ggplot(df) + 
+  geom_point(aes(x=x,y=y,color="Improved Euler's")) + 
+  geom_point(aes(x=xstar,y=ystar,color="Original Euler's")) + 
+  ggtitle("Phase Plane for Predator-Prey Model at delta T = 0.1") + 
+  xlab("Krill (Prey)") + 
+  ylab("Whales (Predator)") + 
+  theme(legend.title = element_blank(),legend.position="bottom")
+```
+
+In this plot, we can see how this method improves the accuracy of the approximation without having to reduce the value of $\Delta t$. The points in red show us that the solution trajectory for improved Euler's is "tighter" than original Euler's. Although the approximations do not cycle around exactly to the point $(1,2)$, the trajectory is demonstrably more periodic than the original method.
