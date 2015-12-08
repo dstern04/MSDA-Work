@@ -1,0 +1,74 @@
+---
+title: "IS 609 Assignment 14"
+author: "David Stern"
+date: "November 29, 2015"
+output: pdf_document
+---
+
+A company is assembling a team to carry out a series of operations. There are four members of the team: A, B, C and D, and four operations to be carried out. Each team member can carry out exactly one operation. All four operations must be carried out successfully for the overall project to succeed, however the probability of a particular team member succeeding in a particular operation varies, as shown in the table below. For example, if the team members were assigned to operations in the order ABCD, then the overall probability of successful completion of the project is $(0.9)(0.6)(0.85)(0.7) = 0.3213$. If there is any possible way that the team can be arranged such that the overall probability of success exceeds 45%, then the manager will approve the project. Will the manager approve the project? If yes, what is the arrangement of the team that gives the highest probability of success?
+
+The following is our operations matrix:
+
+```{r}
+suppressWarnings(suppressMessages(library(knitr)))
+ops <- data.frame(c(0.9,0.7,0.85,0.75),c(0.8,0.6,0.7,0.7),
+                  c(0.9,0.8,0.85,0.75),c(0.85,0.7,0.8,0.7))
+colnames(ops) <- c(1,2,3,4)
+rownames(ops) <- c("A","B","C","D")
+kable(ops)
+```
+
+Although not the most elegant approach, with only $4! = 24$ possible solutions, we can solve this program by calculating the probability of success for each series of operations.
+
+
+```{r}
+A1 <- 0.9
+A2 <- 0.8
+A3 <- 0.9
+A4 <- 0.85
+B1 <- 0.7
+B2 <- 0.6
+B3 <- 0.8
+B4 <- 0.7
+C1 <- 0.85
+C2 <- 0.7
+C3 <- 0.85
+C4 <- 0.8
+D1 <- 0.75
+D2 <- 0.7
+D3 <- 0.75
+D4 <- 0.7
+
+solutions <- c()
+
+solutions[1] <- A1*B2*C3*D4
+solutions[2] <- A1*B2*C4*D3
+solutions[3] <- A1*B3*C2*D4
+solutions[4] <- A1*B3*C4*D2
+solutions[5] <- A1*B4*C2*D3
+solutions[6] <- A1*B4*C3*D2
+solutions[7] <- B1*A2*C3*D4
+solutions[8] <- B1*A2*C4*D3
+solutions[9] <- B1*A3*C2*D4
+solutions[10] <- B1*A3*C4*D2
+solutions[11] <- B1*A4*C2*D3
+solutions[12] <- B1*A4*C3*D2
+solutions[13] <- C1*A2*B3*D4
+solutions[14] <- C1*A2*B4*D3
+solutions[15] <- C1*A3*B2*D4
+solutions[16] <- C1*A3*B4*D2
+solutions[17] <- C1*A4*B2*D3
+solutions[18] <- C1*A4*B3*D2
+solutions[19] <- D1*A2*B3*C4
+solutions[20] <- D1*A2*B4*C3
+solutions[21] <- D1*A3*B2*C4
+solutions[22] <- D1*A3*B4*C2
+solutions[23] <- D1*A4*B2*C3
+solutions[24] <- D1*A4*B3*C2
+
+max(solutions)
+
+match("0.4046",solutions)
+```
+
+There is no pathway where the team's probability of success will exceed $0.4046$ so the manager will not approve the project. The solution that gave us this probability was the 18th permutation, $C1*A4*B3*D2$, or $CDBA$.

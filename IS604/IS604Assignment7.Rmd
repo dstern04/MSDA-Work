@@ -79,3 +79,33 @@ kable(df)
 ```
 
 Our value for $\chi_{0}^{2}$ value is the sum of the right-most column, `r sum(fit)`. At $\alpha=0.05$ and $k-1 = 5$ degrees of freedom, $\chi_{0.05,5}^{2} = 11.1$. Since $\chi_{0}^{2} < \chi_{0.05,5}^{2}$, we do not reject the null hypothesis.
+
+10.1
+----
+
+Our statistical test for the simulation model of the job shop with an average number of jobs $X$ and a true mean value $\mu_{0}$ will be a double-sided test:
+
+$$H_{0} : E(X) = 22.5$$
+$$H_{A} : E(X) \neq 22.5$$
+
+The results of the simulation are:
+
+$$18.9, 22.0, 19.4, 22.1, 19.8, 21.9, 20.2$$
+$$For\: \alpha = 0.05, n = 7$$
+$$\bar{X} = \frac{1}{n}\sum_{i=1}^{n} X_{i} = 20.6$$
+$$S = \left[ \frac{\sum_{i=1}^{n}(X_{i} - \bar{X})^{2}}{n-1}\right]^{\frac{1}{2}} 1.36$$
+$$t_{\alpha/2,n-1} = t_{0.025,6} = 2.45$$
+$$t_{0} = \frac{20.6-22.5}{1.36/ \sqrt{7}} = -3.69$$
+For a two-sided test, if $|t_{0}| > t_{0.025,6}$, we reject $H_{0}$.
+Since $|-3.69| > 2.45$, we reject the null hypothesis. The model hypothesis is not consistent with system behavior.
+
+If two jobs is viewed as critical, we can determint the value of the test using the open characteristic curves for the two-sided $t$ test in table $A.10$ in the $Discrete-Event\:System\:Simulation$ textbook.
+
+$$\hat{\delta} = \frac{E(X)-\mu_{0}}{S} = \frac{2}{1.36} = 1.47$$
+$$for\:n=7 \:and\: \alpha = 0.05, \beta(\hat{\delta}) = \beta(1.47) \approx 0.1$$
+
+The power of the test is $1 - \beta \approx 0.9$
+
+Using the table, we see that the sample size needed to guarantee a power of $0.8$ or higher for $\alpha=0.05$ is $6$.
+
+
