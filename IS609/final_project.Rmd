@@ -388,6 +388,11 @@ ggplot(df, aes(x = x1)) +
 
 Reducing the available starting capital moves the point of maximum profit to $(2, 5)$ or $1,900. Nothing is gained by adding additional water unless the available capital increases as well.
 
+
+
+
+
+
 Chapter 12.5, Project 1
 -----------------------
 
@@ -417,7 +422,30 @@ ggplot(df) +
   ylab("Whales (Predator)")
 ```
 
-In this plot, we see an approximation to the solution trajectory for the predator-prey model. Starting at $(1,2)$ and moving counter-clockwise, we see that the points do not cycle back through the initial point, demonstrating that it diverges from the true solution trajectory, which is periodic. We can get a better approximation if we reduce the value of $\Delta t$. Instead of reducing the value of $\Delta t$, we will see if we can improve the accuracy of the approximation using the improved Euler's method, in which the solution trajectory is found by taking the average of the two slopes: 
+In this plot, we see an approximation to the solution trajectory for the predator-prey model. Starting at $(1,2)$ and moving counter-clockwise, we see that the points do not cycle back through the initial point, demonstrating that it diverges from the true solution trajectory, which is periodic. We can get a better approximation to true periodicity if we reduce the value of $\Delta t$. In this next plot, we will see what happens when we $\Delta t = 0.001$, so $n=1000$.
+
+
+```{r}
+x2 <- c(1)
+y2 <- c(2)
+deltaT <- 0.001
+t <- seq(0,3,by=deltaT)
+
+for (i in 1:3000){
+ x2[i+1] <- x2[i] + (3*x2[i] - x2[i]*y2[i])*deltaT
+ y2[i+1] <- y2[i] + (x2[i]*y2[i] - 2*y2[i])*deltaT
+}
+
+df <- data.frame(t,x2,y2)
+
+ggplot(df) + 
+  geom_point(aes(x=x2,y=y2)) + 
+  ggtitle("Phase Plane for Predator-Prey Model at delta T = 0.1") + 
+  xlab("Krill (Prey)") + 
+  ylab("Whales (Predator)")
+```
+
+Instead of reducing the value of $\Delta t$, we will see if we can improve the accuracy of the approximation using the improved Euler's method, in which the solution trajectory is found by taking the average of the two slopes: 
 
 $$x_{n+1} = x_{n} + \left[f(t_{n},x_{n},y_{n}) + f(t_{n+1},x_{n+1}^{*},y_{n+1}^{*})\right]\frac{\Delta t}{2}$$
 $$y_{n+1} = y_{n} + \left[g(t_{n},x_{n},y_{n}) + g(t_{n+1},x_{n+1}^{*},y_{n+1}^{*})\right]\frac{\Delta t}{2}$$
