@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<style type="text/css">
+
+body {
+    font: 10px sans-serif;
+}
+
+.axis path, .axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+
+.bar {
+    fill: steelblue;
+}
+
+.x.axis path {
+    display: none;
+}
+
+</style>
+
+<body>
+	<h2>Class 2</h2>
+	<div class="chart"></div>
+</body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js" charset="utf-8"></script>
+
+<script>
+
+ /*var data = [
+        {"year": 1931, "yield" : 28.96667, "variety" : "Manchuria" },
+        {"year": 1931, "yield" : 29.66667, "variety" : "Glabron" },
+        {"year": 1931, "yield" : 25.7,    "variety" : "Svansota" },
+        {"year": 1931, "yield" : 26.3,    "variety" : "Velvet" },
+        {"year": 1931, "yield" : 33.93333,    "variety" : "Trebi" },
+        {"year": 1931, "yield" : 33.6,    "variety" : "No. 457" },
+        {"year": 1931, "yield" : 28.1, "variety" : "No. 462" },
+        {"year": 1931, "yield" : 32, "variety" : "Peatland" },
+        {"year": 1931, "yield" : 33.06666,    "variety" : "No. 475" },
+        {"year": 1931, "yield" : 31.6, "variety" : "Wisconsin No. 38" },
+        {"year":1932, "yield" : 22.56667, "variety" : "Manchuria" },
+        {"year":1932, "yield" : 25.86667, "variety" : "Glabron" },
+        {"year":1932, "yield" : 22.23333,    "variety" : "Svansota" },
+        {"year":1932, "yield" : 22.46667, "variety" : "Velvet" },
+        {"year":1932, "yield" : 30.6,    "variety" : "Trebi" },
+        {"year":1932, "yield" : 22.7,    "variety" : "No. 457" },
+        {"year":1932, "yield" : 22.5, "variety" : "No. 462" },
+        {"year":1932, "yield" : 31.36667, "variety" : "Peatland" },
+        {"year":1932, "yield" : 27.36667,    "variety" : "No. 475" },
+        {"year":1932, "yield" : 29.33333, "variety" : "Wisconsin No. 38" },
+        ];*/
+
+
+var margin = {
+    top: 20,
+    right: 20,
+    bottom: 30,
+    left: 60
+},
+width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var x = d3.scale.ordinal()
+    .rangeRoundBands([0, width], .1);
+
+var y = d3.scale.linear()
+    .rangeRound([height, 0]);
+
+var color = d3.scale.ordinal()
+    .range(["#308fef", "#5fa9f3"]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left")
+    .tickFormat(d3.format(".2s"));
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+d3.tsv("https://dl.dropboxusercontent.com/u/2834896/barley.tsv", function (error, data) {
+    
+    data.forEach(function (d) {
+        d.yield = +d.yield;
+        d.year = d.year;
+        d.variety = d.variety;
+        d.site = d.site;
+    });
+
+    color.domain(d3.keys(data[0]).filter(function (key) {
+        return key == "year";
+    }));
+
+    data.forEach(function (d) {
+        var y0 = 0;
+        d.types = color.domain().map(function (name) {
+            return {
+                name: name,
+                y0: y0,
+                y1: y0 += +d[name]
+            };
+        });
+        d.total = d.types[d.types.length - 1].y1;
+    });
+
+    data.sort(function (a, b) {
+        return a.variety - b.variety;
+    });
+
+    x.domain(data.map(function (d) {
+        return d.variety;
+    }));
+
+    y.domain([0, d3.max(data, function (d) {
+        return d.total;
+    })]);
+
+    svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis);
+
+    svg.append("g")
+        .attr("class", "y axis")
+        .call(yAxis)
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Crop Yield");
+
+    var varieties = svg.selectAll(".varieties")
+        .data(data)
+        .enter().append("g")
+        .attr("class", "g")
+        .attr("transform", function (d) {
+        return "translate(" + x(d.variety) + ",0)";
+    });
+
+    varieties.selectAll("rect")
+        .data(function (d) {
+        return d.types;
+    })
+        .enter().append("rect")
+        //.filter(function(d) { return d.site == "Duluth" }) // Filter just Duluth
+        .attr("width", x.rangeBand())
+        .attr("y", function (d) {
+        return y(d.y1);
+    })
+        .attr("height", function (d) {
+        return y(d.y0) - y(d.y1);
+    })
+        .style("fill", function (d) {
+        return color(d.name);
+    });
+
+    var legend = svg.selectAll(".legend")
+        .data(color.domain().slice().reverse())
+        .enter().append("g")
+        .attr("class", "legend")
+        .attr("transform", function (d, i) {
+        return "translate(0," + i * 20 + ")";
+    });
+
+    legend.append("rect")
+        .attr("x", width - 18)
+        .attr("width", 18)
+        .attr("height", 18)
+        .style("fill", color);
+
+    legend.append("text")
+        .attr("x", width - 24)
+        .attr("y", 9)
+        .attr("dy", ".35em")
+        .style("text-anchor", "end")
+        .text(function (d) {
+        return d;
+    });
+});
+
+
+</script>
