@@ -1,0 +1,802 @@
+---
+title: "Measuring Gerrymandering with the Efficiency Gap"
+author: "David Stern"
+date: "April 24, 2016"
+output: pdf_document
+---
+
+
+```{r,echo=FALSE}
+suppressWarnings(suppressMessages(library(operators)))
+suppressWarnings(suppressMessages(library(plyr)))
+suppressWarnings(suppressMessages(library(ggplot2)))
+suppressWarnings(suppressMessages(library(reshape2)))
+suppressWarnings(suppressMessages(library(RCurl)))
+suppressWarnings(suppressMessages(library(knitr)))
+suppressWarnings(suppressMessages(library(grid)))
+suppressWarnings(suppressMessages(library(gridExtra)))
+suppressWarnings(suppressMessages(library(maptools)))
+suppressWarnings(suppressMessages(library(spatstat)))
+# load 2006
+results2006 <- "https://raw.githubusercontent.com/TimeMagazine/congressional-election-results/master/data/results_2006.csv"
+# https://s3.amazonaws.com/s3.azavea.com/com.redistrictingthenation/pdfs/Redistricting_The_Nation_Addendum.pdf
+cd2006 <- getURL(results2006)
+cd2006 <- read.csv(textConnection(cd2006))
+suppressWarnings(cd2006$votes <- as.numeric(as.character(cd2006$votes)))
+cd2006 <- subset(cd2006,district != "S")
+cd2006$district[cd2006$district == "01 - FULL TERM"] <- "01"
+cd2006$district[cd2006$district == "04 - FULL TERM"] <- "04"
+cd2006$district[cd2006$district == "10 - FULL TERM"] <- "10"
+cd2006$district[cd2006$district == "11 - FULL TERM"] <- "11"
+d <- c("Democratic,Working Families","Working Families,Democratic",
+       "Democratic,Progressive,Working Families","Democratic-Farmer Labor",
+       "Democratic,Working Families,Independence","Democratic,Independence,Working Families",
+       "Democratic-Nonpartisan League","Write-In,Democratic,Democratic","Democratic")
+r <- c("Republican,Tax Revolt,Conservative,Independence","Republican,Tax Revolt,Conservative",
+       "Republican,Tax Revolt","Republican,Conservative","Conservative,Republican",
+       "Republican,Conservative,Libertarian","Republican,Conservative,Independence",
+       "Independence,Republican","Independent Party,Republican", "Republican,Constitution",
+       "Write-In,Republican,Republican","Conservative,Independence,Republican","Republican")
+
+for (i in 1:length(cd2006$parties)){
+  if (cd2006$parties[i] %in% d){
+    cd2006$parties[i] <- "Democratic"
+  }
+  else if (cd2006$parties[i] %in% r){
+    cd2006$parties[i] <- "Republican"
+  }
+}
+# calc total vote by state
+totalVoteByState2006 <- aggregate(votes ~ state, cd2006, sum)
+# calc total vote by district
+totalVoteByDistrict2006 <- aggregate(votes ~ state + district, cd2006, sum)
+totalVoteByDistrict2006 <- totalVoteByDistrict2006[order(totalVoteByDistrict2006$state,totalVoteByDistrict2006$district),]
+# add threshold of simple majority based on each district's vote total
+totalVoteByDistrict2006$simpleMajority <- round(totalVoteByDistrict2006$votes/2 + 1,0)
+partyTotalsByDistrict2006 <- aggregate(votes ~ state + district + parties, cd2006, sum)
+partyTotalsByDistrict2006 <- partyTotalsByDistrict2006[order(partyTotalsByDistrict2006$state,partyTotalsByDistrict2006$district),]
+partyTotalsByDistrict2006 <- join(partyTotalsByDistrict2006,totalVoteByDistrict2006,by=c("state","district"),type="left")
+colnames(partyTotalsByDistrict2006)[5] <- "totalVote"
+partyTotalsByDistrict2006 <- partyTotalsByDistrict2006[,c(1,2,5,6,4,3)]
+partyTotalsByDistrict2006$pctVote <- partyTotalsByDistrict2006$votes/partyTotalsByDistrict2006$totalVote
+
+allStates <- unique(partyTotalsByDistrict2006$state)
+allDistricts <- unique(partyTotalsByDistrict2006$district)
+partyTotalsByDistrict2006$win <- 0 #create column to indicate wins
+
+for (i in 1:length(allDistricts)){
+  for (j in 1:length(allStates)){
+    row_to_find <- data.frame(state=allStates[j], district=allDistricts[i])
+    if(nrow(merge(row_to_find,partyTotalsByDistrict2006))>0){
+      subFrame <- subset(partyTotalsByDistrict2006,state==allStates[j] & district==allDistricts[i])
+      w <- which.max(subFrame$pctVote)
+      partyTotalsByDistrict2006[partyTotalsByDistrict2006$state==allStates[j] & 
+                                  partyTotalsByDistrict2006$district==allDistricts[i],]$win[w] <- 1
+    }
+  }
+}
+partyTotalsByDistrict2006$wastedVote <- 0
+partyTotalsByDistrict2006$wastedVote <- ifelse(partyTotalsByDistrict2006$win == 1 & 
+                                                 partyTotalsByDistrict2006$votes > partyTotalsByDistrict2006$simpleMajority,
+                                               partyTotalsByDistrict2006$votes - partyTotalsByDistrict2006$simpleMajority,
+                                               ifelse(partyTotalsByDistrict2006$win == 1,0,partyTotalsByDistrict2006$votes))
+seatsWon2006 <- aggregate(win ~ parties,partyTotalsByDistrict2006,sum)
+seatsWon2006 <- subset(seatsWon2006,win!=0)
+seatsWonByState2006 <- aggregate(win ~ state + parties,partyTotalsByDistrict2006,sum)
+seatsWonByState2006 <- subset(seatsWonByState2006,win!=0)
+seatsWonByState2006 <- seatsWonByState2006[order(seatsWonByState2006$state,-seatsWonByState2006$win),]
+totalWastedVoteByParty2006 <- aggregate(wastedVote ~ parties, partyTotalsByDistrict2006, sum)
+totalWastedVoteByParty2006 <- totalWastedVoteByParty2006[order(-totalWastedVoteByParty2006$wastedVote),]
+totalVoteByParty2006 <- aggregate(votes ~ parties, partyTotalsByDistrict2006, sum)
+totalVoteByParty2006 <- totalVoteByParty2006[order(-totalVoteByParty2006$votes),]
+numDistricts <- data.frame(table(totalVoteByDistrict2006$state))
+colnames(numDistricts) <- c("state","number")
+numDistricts[9,2] <- 27 # correct, missing two from redistricting
+totalWastedVoteByPartyByState2006 <- aggregate(wastedVote ~ state + parties, partyTotalsByDistrict2006, sum)
+totalVoteByPartyByState2006 <- aggregate(votes ~ state + parties, partyTotalsByDistrict2006, sum)
+totalVoteByPartyByState2006 <- totalVoteByPartyByState2006[order(totalVoteByPartyByState2006$state,-totalVoteByPartyByState2006$votes),]
+totalWastedVoteByPartyByState2006 <- totalWastedVoteByPartyByState2006[order(totalWastedVoteByPartyByState2006$state,-totalWastedVoteByPartyByState2006$wastedVote),]
+stateData2006 <- subset(totalWastedVoteByPartyByState2006,parties=="Democratic" | totalWastedVoteByPartyByState2006$parties=="Republican")
+stateData2006 <- dcast(stateData2006,state ~ parties,value.var="wastedVote")
+# bind number districts and total vote
+stateData2006 <- join(stateData2006,numDistricts,by="state",type="left")
+stateData2006 <- join(stateData2006,totalVoteByState2006,by="state",type="left")
+stateData2006$efficiency.gap <- abs(stateData2006$Democratic-stateData2006$Republican)/stateData2006$votes
+stateData2006$seats.misapportioned <- stateData2006$efficiency.gap*stateData2006$number
+colnames(stateData2006)[2:5] <- c("w.votes.D","w.votes.R","seats","total.votes")
+stateData2006$adv.R <- 0 
+stateData2006$adv.D <- 0
+
+totalVoteByPartyByState2006 <- subset(totalVoteByPartyByState2006,parties=="Democratic" | totalVoteByPartyByState2006$parties=="Republican")
+totalVoteByPartyByState2006 <- dcast(totalVoteByPartyByState2006,state ~ parties,value.var="votes")
+colnames(totalVoteByPartyByState2006)[2:3] <- c("d.votes","r.votes")
+stateData2006 <- join(stateData2006,totalVoteByPartyByState2006,by="state",type="left")
+# calculate projected seats
+stateData2006$proj.D.seats <- (stateData2006$d.votes/stateData2006$total.votes)*stateData2006$seats
+stateData2006$proj.R.seats <- (stateData2006$r.votes/stateData2006$total.votes)*stateData2006$seats
+display <- stateData2006
+seatsWonByState2006 <- dcast(seatsWonByState2006,state ~ parties,value.var="win",fill="0")
+seatsWonByState2006$Democratic <- as.numeric(as.character(seatsWonByState2006$Democratic))
+seatsWonByState2006$Republican <- as.numeric(as.character(seatsWonByState2006$Republican))
+colnames(seatsWonByState2006)[2:3] <- c("act.D.seats","act.R.seats")
+stateData2006 <- join(stateData2006,seatsWonByState2006,by="state",type="left")
+stateData2006$voteratio <- ifelse(stateData2006$r.votes<stateData2006$d.votes,
+                                  stateData2006$r.votes/stateData2006$d.votes,
+                                  stateData2006$d.votes/stateData2006$r.votes)
+stateData2006$majority <- ifelse(stateData2006$r.votes>stateData2006$d.votes,"R","D")
+
+# efficiency gap by district
+districtData2006 <- dcast(partyTotalsByDistrict2006,state + district + totalVote ~ parties,value.var="wastedVote",fill=0)
+districtData2006$efficiency.gap <- abs(districtData2006$Democratic-districtData2006$Republican)/districtData2006$totalVote
+districtData2006 <- districtData2006[,c("state","district","totalVote","Republican","Democratic","efficiency.gap")]
+colnames(districtData2006)[4:5] <- c("w.votes.R","w.votes.D")
+allPartyDistrictTotals2006 <- dcast(partyTotalsByDistrict2006,state + district ~ parties,value.var="votes",fill=0)
+twoPartyDistrictTotals2006 <- allPartyDistrictTotals2006[,c("state","district","Republican","Democratic")]
+colnames(twoPartyDistrictTotals2006)[3:4] <- c("votes.R","votes.D")
+twoPartyDistrictTotals2006$vote.ratio <- ifelse(twoPartyDistrictTotals2006$votes.R<twoPartyDistrictTotals2006$votes.D,
+                                                twoPartyDistrictTotals2006$votes.R/twoPartyDistrictTotals2006$votes.D,
+                                                twoPartyDistrictTotals2006$votes.D/twoPartyDistrictTotals2006$votes.R)
+districtData2006 <- join(districtData2006,twoPartyDistrictTotals2006,by=c("state","district"),type="left")
+districtData2006$majority <- ifelse(districtData2006$votes.R>districtData2006$votes.D,"R","D")
+districtData2006$margin <- (abs(districtData2006$votes.R-districtData2006$votes.D)/districtData2006$totalVote)*100
+districtData2006$adv.R <- 0 
+districtData2006$adv.D <- 0
+for (i in 1:nrow(districtData2006)){
+  if (districtData2006$w.votes.D[i] < districtData2006$w.votes.R[i]){
+    districtData2006$adv.D[i] <- districtData2006$efficiency.gap[i]
+  }
+  else if (districtData2006$w.votes.R[i] < districtData2006$w.votes.D[i]){
+    districtData2006$adv.R[i] <- districtData2006$efficiency.gap[i]
+  }
+}
+sumAdv2006 <- aggregate(cbind(adv.R, adv.D) ~ state,districtData2006,sum)
+sumAdv2006$state.seat.favor <- ifelse(sumAdv2006$adv.R>sumAdv2006$adv.D,"R","D")
+sumAdv2006$state.seats.misapportioned <- abs(sumAdv2006$adv.R-sumAdv2006$adv.D)
+sumAdv2006 <- sumAdv2006[,c(1,4,5)]
+districtData2006 <- join(districtData2006,sumAdv2006,by="state",type="left")
+# load 2008
+results2008 <- "https://raw.githubusercontent.com/TimeMagazine/congressional-election-results/master/data/results_2008.csv"
+# https://s3.amazonaws.com/s3.azavea.com/com.redistrictingthenation/pdfs/Redistricting_The_Nation_Addendum.pdf
+cd2008 <- getURL(results2008)
+cd2008 <- read.csv(textConnection(cd2008))
+suppressWarnings(cd2008$votes <- as.numeric(as.character(cd2008$votes)))
+cd2008 <- subset(cd2008,district != "S")
+cd2008$district[cd2008$district == "01 - FULL TERM"] <- "01"
+cd2008$district[cd2008$district == "04 - FULL TERM"] <- "04"
+cd2008$district[cd2008$district == "10 - FULL TERM"] <- "10"
+cd2008$district[cd2008$district == "11 - FULL TERM"] <- "11"
+d <- c("Democratic,Working Families","Working Families,Democratic",
+       "Democratic,Progressive,Working Families","Democratic-Farmer Labor",
+       "Democratic,Working Families,Independence","Democratic,Independence,Working Families",
+       "Democratic-Nonpartisan League","Write-In,Democratic,Democratic","Democratic")
+r <- c("Republican,Tax Revolt,Conservative,Independence","Republican,Tax Revolt,Conservative",
+       "Republican,Tax Revolt","Republican,Conservative","Conservative,Republican",
+       "Republican,Conservative,Libertarian","Republican,Conservative,Independence",
+       "Independence,Republican","Independent Party,Republican", "Republican,Constitution",
+       "Write-In,Republican,Republican","Conservative,Independence,Republican","Republican")
+
+for (i in 1:length(cd2008$parties)){
+  if (cd2008$parties[i] %in% d){
+    cd2008$parties[i] <- "Democratic"
+  }
+  else if (cd2008$parties[i] %in% r){
+    cd2008$parties[i] <- "Republican"
+  }
+}
+# calc total vote by state
+totalVoteByState2008 <- aggregate(votes ~ state, cd2008, sum)
+# calc total vote by district
+totalVoteByDistrict2008 <- aggregate(votes ~ state + district, cd2008, sum)
+totalVoteByDistrict2008 <- totalVoteByDistrict2008[order(totalVoteByDistrict2008$state,totalVoteByDistrict2008$district),]
+# add threshold of simple majority based on each district's vote total
+totalVoteByDistrict2008$simpleMajority <- round(totalVoteByDistrict2008$votes/2 + 1,0)
+partyTotalsByDistrict2008 <- aggregate(votes ~ state + district + parties, cd2008, sum)
+partyTotalsByDistrict2008 <- partyTotalsByDistrict2008[order(partyTotalsByDistrict2008$state,partyTotalsByDistrict2008$district),]
+partyTotalsByDistrict2008 <- join(partyTotalsByDistrict2008,totalVoteByDistrict2008,by=c("state","district"),type="left")
+colnames(partyTotalsByDistrict2008)[5] <- "totalVote"
+partyTotalsByDistrict2008 <- partyTotalsByDistrict2008[,c(1,2,5,6,4,3)]
+partyTotalsByDistrict2008$pctVote <- partyTotalsByDistrict2008$votes/partyTotalsByDistrict2008$totalVote
+
+allStates <- unique(partyTotalsByDistrict2008$state)
+allDistricts <- unique(partyTotalsByDistrict2008$district)
+partyTotalsByDistrict2008$win <- 0 #create column to indicate wins
+
+for (i in 1:length(allDistricts)){
+  for (j in 1:length(allStates)){
+    row_to_find <- data.frame(state=allStates[j], district=allDistricts[i])
+    if(nrow(merge(row_to_find,partyTotalsByDistrict2008))>0){
+      subFrame <- subset(partyTotalsByDistrict2008,state==allStates[j] & district==allDistricts[i])
+      w <- which.max(subFrame$pctVote)
+      partyTotalsByDistrict2008[partyTotalsByDistrict2008$state==allStates[j] & 
+                                  partyTotalsByDistrict2008$district==allDistricts[i],]$win[w] <- 1
+    }
+  }
+}
+partyTotalsByDistrict2008$wastedVote <- 0
+partyTotalsByDistrict2008$wastedVote <- ifelse(partyTotalsByDistrict2008$win == 1 & 
+                                                 partyTotalsByDistrict2008$votes > partyTotalsByDistrict2008$simpleMajority,
+                                               partyTotalsByDistrict2008$votes - partyTotalsByDistrict2008$simpleMajority,
+                                               ifelse(partyTotalsByDistrict2008$win == 1,0,partyTotalsByDistrict2008$votes))
+seatsWon2008 <- aggregate(win ~ parties,partyTotalsByDistrict2008,sum)
+seatsWon2008 <- subset(seatsWon2008,win!=0)
+seatsWonByState2008 <- aggregate(win ~ state + parties,partyTotalsByDistrict2008,sum)
+seatsWonByState2008 <- subset(seatsWonByState2008,win!=0)
+seatsWonByState2008 <- seatsWonByState2008[order(seatsWonByState2008$state,-seatsWonByState2008$win),]
+totalWastedVoteByParty2008 <- aggregate(wastedVote ~ parties, partyTotalsByDistrict2008, sum)
+totalWastedVoteByParty2008 <- totalWastedVoteByParty2008[order(-totalWastedVoteByParty2008$wastedVote),]
+totalVoteByParty2008 <- aggregate(votes ~ parties, partyTotalsByDistrict2008, sum)
+totalVoteByParty2008 <- totalVoteByParty2008[order(-totalVoteByParty2008$votes),]
+numDistricts <- data.frame(table(totalVoteByDistrict2008$state))
+colnames(numDistricts) <- c("state","number")
+numDistricts[9,2] <- 27 # correct, missing two from redistricting
+totalWastedVoteByPartyByState2008 <- aggregate(wastedVote ~ state + parties, partyTotalsByDistrict2008, sum)
+totalVoteByPartyByState2008 <- aggregate(votes ~ state + parties, partyTotalsByDistrict2008, sum)
+totalVoteByPartyByState2008 <- totalVoteByPartyByState2008[order(totalVoteByPartyByState2008$state,-totalVoteByPartyByState2008$votes),]
+totalWastedVoteByPartyByState2008 <- totalWastedVoteByPartyByState2008[order(totalWastedVoteByPartyByState2008$state,-totalWastedVoteByPartyByState2008$wastedVote),]
+stateData2008 <- subset(totalWastedVoteByPartyByState2008,parties=="Democratic" | totalWastedVoteByPartyByState2008$parties=="Republican")
+stateData2008 <- dcast(stateData2008,state ~ parties,value.var="wastedVote")
+# bind number districts and total vote
+stateData2008 <- join(stateData2008,numDistricts,by="state",type="left")
+stateData2008 <- join(stateData2008,totalVoteByState2008,by="state",type="left")
+stateData2008$efficiency.gap <- abs(stateData2008$Democratic-stateData2008$Republican)/stateData2008$votes
+stateData2008$seats.misapportioned <- stateData2008$efficiency.gap*stateData2008$number
+colnames(stateData2008)[2:5] <- c("w.votes.D","w.votes.R","seats","total.votes")
+
+
+totalVoteByPartyByState2008 <- subset(totalVoteByPartyByState2008,parties=="Democratic" | totalVoteByPartyByState2008$parties=="Republican")
+totalVoteByPartyByState2008 <- dcast(totalVoteByPartyByState2008,state ~ parties,value.var="votes")
+colnames(totalVoteByPartyByState2008)[2:3] <- c("d.votes","r.votes")
+stateData2008 <- join(stateData2008,totalVoteByPartyByState2008,by="state",type="left")
+# calculate projected seats
+stateData2008$proj.D.seats <- (stateData2008$d.votes/stateData2008$total.votes)*stateData2008$seats
+stateData2008$proj.R.seats <- (stateData2008$r.votes/stateData2008$total.votes)*stateData2008$seats
+display <- stateData2008
+seatsWonByState2008 <- dcast(seatsWonByState2008,state ~ parties,value.var="win",fill="0")
+seatsWonByState2008$Democratic <- as.numeric(as.character(seatsWonByState2008$Democratic))
+seatsWonByState2008$Republican <- as.numeric(as.character(seatsWonByState2008$Republican))
+colnames(seatsWonByState2008)[2:3] <- c("act.D.seats","act.R.seats")
+stateData2008 <- join(stateData2008,seatsWonByState2008,by="state",type="left")
+stateData2008$voteratio <- ifelse(stateData2008$r.votes<stateData2008$d.votes,
+                                  stateData2008$r.votes/stateData2008$d.votes,
+                                  stateData2008$d.votes/stateData2008$r.votes)
+stateData2008$majority <- ifelse(stateData2008$r.votes>stateData2008$d.votes,"R","D")
+
+# efficiency gap by district
+districtData2008 <- dcast(partyTotalsByDistrict2008,state + district + totalVote ~ parties,value.var="wastedVote",fill=0)
+districtData2008$efficiency.gap <- abs(districtData2008$Democratic-districtData2008$Republican)/districtData2008$totalVote
+districtData2008 <- districtData2008[,c("state","district","totalVote","Republican","Democratic","efficiency.gap")]
+colnames(districtData2008)[4:5] <- c("w.votes.R","w.votes.D")
+allPartyDistrictTotals2008 <- dcast(partyTotalsByDistrict2008,state + district ~ parties,value.var="votes",fill=0)
+twoPartyDistrictTotals2008 <- allPartyDistrictTotals2008[,c("state","district","Republican","Democratic")]
+colnames(twoPartyDistrictTotals2008)[3:4] <- c("votes.R","votes.D")
+twoPartyDistrictTotals2008$vote.ratio <- ifelse(twoPartyDistrictTotals2008$votes.R<twoPartyDistrictTotals2008$votes.D,
+                                                twoPartyDistrictTotals2008$votes.R/twoPartyDistrictTotals2008$votes.D,
+                                                twoPartyDistrictTotals2008$votes.D/twoPartyDistrictTotals2008$votes.R)
+districtData2008 <- join(districtData2008,twoPartyDistrictTotals2008,by=c("state","district"),type="left")
+districtData2008$majority <- ifelse(districtData2008$votes.R>districtData2008$votes.D,"R","D")
+districtData2008$margin <- (abs(districtData2008$votes.R-districtData2008$votes.D)/districtData2008$totalVote)*100
+districtData2008$adv.R <- 0 
+districtData2008$adv.D <- 0
+for (i in 1:nrow(districtData2008)){
+  if (districtData2008$w.votes.D[i] < districtData2008$w.votes.R[i]){
+    districtData2008$adv.D[i] <- districtData2008$efficiency.gap[i]
+  }
+  else if (districtData2008$w.votes.R[i] < districtData2008$w.votes.D[i]){
+    districtData2008$adv.R[i] <- districtData2008$efficiency.gap[i]
+  }
+}
+sumAdv2008 <- aggregate(cbind(adv.R, adv.D) ~ state,districtData2008,sum)
+sumAdv2008$state.seat.favor <- ifelse(sumAdv2008$adv.R>sumAdv2008$adv.D,"R","D")
+sumAdv2008$state.seats.misapportioned <- abs(sumAdv2008$adv.R-sumAdv2008$adv.D)
+sumAdv2008 <- sumAdv2008[,c(1,4,5)]
+districtData2008 <- join(districtData2008,sumAdv2008,by="state",type="left")
+#load 2010
+results2010 <- "https://raw.githubusercontent.com/TimeMagazine/congressional-election-results/master/data/results_2010.csv"
+# https://s3.amazonaws.com/s3.azavea.com/com.redistrictingthenation/pdfs/Redistricting_The_Nation_Addendum.pdf
+cd2010 <- getURL(results2010)
+cd2010 <- read.csv(textConnection(cd2010))
+suppressWarnings(cd2010$votes <- as.numeric(as.character(cd2010$votes)))
+cd2010 <- subset(cd2010,district != "S")
+cd2010$district[cd2010$district == "01 - FULL TERM"] <- "01"
+cd2010$district[cd2010$district == "04 - FULL TERM"] <- "04"
+cd2010$district[cd2010$district == "10 - FULL TERM"] <- "10"
+cd2010$district[cd2010$district == "11 - FULL TERM"] <- "11"
+d <- c("Democratic,Working Families","Working Families,Democratic",
+       "Democratic,Progressive,Working Families","Democratic-Farmer Labor",
+       "Democratic,Working Families,Independence","Democratic,Independence,Working Families",
+       "Democratic-Nonpartisan League","Write-In,Democratic,Democratic","Democratic")
+r <- c("Republican,Tax Revolt,Conservative,Independence","Republican,Tax Revolt,Conservative",
+       "Republican,Tax Revolt","Republican,Conservative","Conservative,Republican",
+       "Republican,Conservative,Libertarian","Republican,Conservative,Independence",
+       "Independence,Republican","Independent Party,Republican", "Republican,Constitution",
+       "Write-In,Republican,Republican","Conservative,Independence,Republican","Republican")
+
+for (i in 1:length(cd2010$parties)){
+  if (cd2010$parties[i] %in% d){
+    cd2010$parties[i] <- "Democratic"
+  }
+  else if (cd2010$parties[i] %in% r){
+    cd2010$parties[i] <- "Republican"
+  }
+}
+# calc total vote by state
+totalVoteByState2010 <- aggregate(votes ~ state, cd2010, sum)
+# calc total vote by district
+totalVoteByDistrict2010 <- aggregate(votes ~ state + district, cd2010, sum)
+totalVoteByDistrict2010 <- totalVoteByDistrict2010[order(totalVoteByDistrict2010$state,totalVoteByDistrict2010$district),]
+# add threshold of simple majority based on each district's vote total
+totalVoteByDistrict2010$simpleMajority <- round(totalVoteByDistrict2010$votes/2 + 1,0)
+partyTotalsByDistrict2010 <- aggregate(votes ~ state + district + parties, cd2010, sum)
+partyTotalsByDistrict2010 <- partyTotalsByDistrict2010[order(partyTotalsByDistrict2010$state,partyTotalsByDistrict2010$district),]
+partyTotalsByDistrict2010 <- join(partyTotalsByDistrict2010,totalVoteByDistrict2010,by=c("state","district"),type="left")
+colnames(partyTotalsByDistrict2010)[5] <- "totalVote"
+partyTotalsByDistrict2010 <- partyTotalsByDistrict2010[,c(1,2,5,6,4,3)]
+partyTotalsByDistrict2010$pctVote <- partyTotalsByDistrict2010$votes/partyTotalsByDistrict2010$totalVote
+
+allStates <- unique(partyTotalsByDistrict2010$state)
+allDistricts <- unique(partyTotalsByDistrict2010$district)
+partyTotalsByDistrict2010$win <- 0 #create column to indicate wins
+
+for (i in 1:length(allDistricts)){
+  for (j in 1:length(allStates)){
+    row_to_find <- data.frame(state=allStates[j], district=allDistricts[i])
+    if(nrow(merge(row_to_find,partyTotalsByDistrict2010))>0){
+      subFrame <- subset(partyTotalsByDistrict2010,state==allStates[j] & district==allDistricts[i])
+      w <- which.max(subFrame$pctVote)
+      partyTotalsByDistrict2010[partyTotalsByDistrict2010$state==allStates[j] & 
+                                  partyTotalsByDistrict2010$district==allDistricts[i],]$win[w] <- 1
+    }
+  }
+}
+partyTotalsByDistrict2010$wastedVote <- 0
+partyTotalsByDistrict2010$wastedVote <- ifelse(partyTotalsByDistrict2010$win == 1 & 
+                                                 partyTotalsByDistrict2010$votes > partyTotalsByDistrict2010$simpleMajority,
+                                               partyTotalsByDistrict2010$votes - partyTotalsByDistrict2010$simpleMajority,
+                                               ifelse(partyTotalsByDistrict2010$win == 1,0,partyTotalsByDistrict2010$votes))
+seatsWon2010 <- aggregate(win ~ parties,partyTotalsByDistrict2010,sum)
+seatsWon2010 <- subset(seatsWon2010,win!=0)
+seatsWonByState2010 <- aggregate(win ~ state + parties,partyTotalsByDistrict2010,sum)
+seatsWonByState2010 <- subset(seatsWonByState2010,win!=0)
+seatsWonByState2010 <- seatsWonByState2010[order(seatsWonByState2010$state,-seatsWonByState2010$win),]
+totalWastedVoteByParty2010 <- aggregate(wastedVote ~ parties, partyTotalsByDistrict2010, sum)
+totalWastedVoteByParty2010 <- totalWastedVoteByParty2010[order(-totalWastedVoteByParty2010$wastedVote),]
+totalVoteByParty2010 <- aggregate(votes ~ parties, partyTotalsByDistrict2010, sum)
+totalVoteByParty2010 <- totalVoteByParty2010[order(-totalVoteByParty2010$votes),]
+numDistricts <- data.frame(table(totalVoteByDistrict2010$state))
+colnames(numDistricts) <- c("state","number")
+numDistricts[9,2] <- 27 # correct, missing two from redistricting
+totalWastedVoteByPartyByState2010 <- aggregate(wastedVote ~ state + parties, partyTotalsByDistrict2010, sum)
+totalVoteByPartyByState2010 <- aggregate(votes ~ state + parties, partyTotalsByDistrict2010, sum)
+totalVoteByPartyByState2010 <- totalVoteByPartyByState2010[order(totalVoteByPartyByState2010$state,-totalVoteByPartyByState2010$votes),]
+totalWastedVoteByPartyByState2010 <- totalWastedVoteByPartyByState2010[order(totalWastedVoteByPartyByState2010$state,-totalWastedVoteByPartyByState2010$wastedVote),]
+stateData2010 <- subset(totalWastedVoteByPartyByState2010,parties=="Democratic" | totalWastedVoteByPartyByState2010$parties=="Republican")
+stateData2010 <- dcast(stateData2010,state ~ parties,value.var="wastedVote")
+# bind number districts and total vote
+stateData2010 <- join(stateData2010,numDistricts,by="state",type="left")
+stateData2010 <- join(stateData2010,totalVoteByState2010,by="state",type="left")
+stateData2010$efficiency.gap <- abs(stateData2010$Democratic-stateData2010$Republican)/stateData2010$votes
+stateData2010$seats.misapportioned <- stateData2010$efficiency.gap*stateData2010$number
+colnames(stateData2010)[2:5] <- c("w.votes.D","w.votes.R","seats","total.votes")
+totalVoteByPartyByState2010 <- subset(totalVoteByPartyByState2010,parties=="Democratic" | totalVoteByPartyByState2010$parties=="Republican")
+totalVoteByPartyByState2010 <- dcast(totalVoteByPartyByState2010,state ~ parties,value.var="votes")
+colnames(totalVoteByPartyByState2010)[2:3] <- c("d.votes","r.votes")
+stateData2010 <- join(stateData2010,totalVoteByPartyByState2010,by="state",type="left")
+# calculate projected seats
+stateData2010$proj.D.seats <- (stateData2010$d.votes/stateData2010$total.votes)*stateData2010$seats
+stateData2010$proj.R.seats <- (stateData2010$r.votes/stateData2010$total.votes)*stateData2010$seats
+display <- stateData2010
+seatsWonByState2010 <- dcast(seatsWonByState2010,state ~ parties,value.var="win",fill="0")
+seatsWonByState2010$Democratic <- as.numeric(as.character(seatsWonByState2010$Democratic))
+seatsWonByState2010$Republican <- as.numeric(as.character(seatsWonByState2010$Republican))
+colnames(seatsWonByState2010)[2:3] <- c("act.D.seats","act.R.seats")
+stateData2010 <- join(stateData2010,seatsWonByState2010,by="state",type="left")
+stateData2010$voteratio <- ifelse(stateData2010$r.votes<stateData2010$d.votes,
+                                  stateData2010$r.votes/stateData2010$d.votes,
+                                  stateData2010$d.votes/stateData2010$r.votes)
+stateData2010$majority <- ifelse(stateData2010$r.votes>stateData2010$d.votes,"R","D")
+
+# efficiency gap by district
+districtData2010 <- dcast(partyTotalsByDistrict2010,state + district + totalVote ~ parties,value.var="wastedVote",fill=0)
+districtData2010$efficiency.gap <- abs(districtData2010$Democratic-districtData2010$Republican)/districtData2010$totalVote
+districtData2010 <- districtData2010[,c("state","district","totalVote","Republican","Democratic","efficiency.gap")]
+colnames(districtData2010)[4:5] <- c("w.votes.R","w.votes.D")
+allPartyDistrictTotals2010 <- dcast(partyTotalsByDistrict2010,state + district ~ parties,value.var="votes",fill=0)
+twoPartyDistrictTotals2010 <- allPartyDistrictTotals2010[,c("state","district","Republican","Democratic")]
+colnames(twoPartyDistrictTotals2010)[3:4] <- c("votes.R","votes.D")
+twoPartyDistrictTotals2010$vote.ratio <- ifelse(twoPartyDistrictTotals2010$votes.R<twoPartyDistrictTotals2010$votes.D,
+                                                twoPartyDistrictTotals2010$votes.R/twoPartyDistrictTotals2010$votes.D,
+                                                twoPartyDistrictTotals2010$votes.D/twoPartyDistrictTotals2010$votes.R)
+districtData2010 <- join(districtData2010,twoPartyDistrictTotals2010,by=c("state","district"),type="left")
+districtData2010$majority <- ifelse(districtData2010$votes.R>districtData2010$votes.D,"R","D")
+districtData2010$margin <- (abs(districtData2010$votes.R-districtData2010$votes.D)/districtData2010$totalVote)*100
+districtData2010$adv.R <- 0 
+districtData2010$adv.D <- 0
+for (i in 1:nrow(districtData2010)){
+  if (districtData2010$w.votes.D[i] < districtData2010$w.votes.R[i]){
+    districtData2010$adv.D[i] <- districtData2010$efficiency.gap[i]
+  }
+  else if (districtData2010$w.votes.R[i] < districtData2010$w.votes.D[i]){
+    districtData2010$adv.R[i] <- districtData2010$efficiency.gap[i]
+  }
+}
+sumAdv2010 <- aggregate(cbind(adv.R, adv.D) ~ state,districtData2010,sum)
+sumAdv2010$state.seat.favor <- ifelse(sumAdv2010$adv.R>sumAdv2010$adv.D,"R","D")
+sumAdv2010$state.seats.misapportioned <- abs(sumAdv2010$adv.R-sumAdv2010$adv.D)
+sumAdv2010 <- sumAdv2010[,c(1,4,5)]
+districtData2010 <- join(districtData2010,sumAdv2010,by="state",type="left")
+# load 2012
+results2012 <- "https://raw.githubusercontent.com/TimeMagazine/congressional-election-results/master/data/results_2012.csv"
+# https://s3.amazonaws.com/s3.azavea.com/com.redistrictingthenation/pdfs/Redistricting_The_Nation_Addendum.pdf
+cd2012 <- getURL(results2012)
+cd2012 <- read.csv(textConnection(cd2012))
+suppressWarnings(cd2012$votes <- as.numeric(as.character(cd2012$votes)))
+cd2012 <- subset(cd2012,district != "S")
+cd2012$district[cd2012$district == "01 - FULL TERM"] <- "01"
+cd2012$district[cd2012$district == "04 - FULL TERM"] <- "04"
+cd2012$district[cd2012$district == "10 - FULL TERM"] <- "10"
+cd2012$district[cd2012$district == "11 - FULL TERM"] <- "11"
+d <- c("Democratic,Working Families","Working Families,Democratic",
+       "Democratic,Progressive,Working Families","Democratic-Farmer Labor",
+       "Democratic,Working Families,Independence","Democratic,Independence,Working Families",
+       "Democratic-Nonpartisan League","Write-In,Democratic,Democratic","Democratic")
+r <- c("Republican,Tax Revolt,Conservative,Independence","Republican,Tax Revolt,Conservative",
+       "Republican,Tax Revolt","Republican,Conservative","Conservative,Republican",
+       "Republican,Conservative,Libertarian","Republican,Conservative,Independence",
+       "Independence,Republican","Independent Party,Republican", "Republican,Constitution",
+       "Write-In,Republican,Republican","Conservative,Independence,Republican","Republican")
+
+for (i in 1:length(cd2012$parties)){
+  if (cd2012$parties[i] %in% d){
+    cd2012$parties[i] <- "Democratic"
+  }
+  else if (cd2012$parties[i] %in% r){
+    cd2012$parties[i] <- "Republican"
+  }
+}
+# calc total vote by state
+totalVoteByState2012 <- aggregate(votes ~ state, cd2012, sum)
+# calc total vote by district
+totalVoteByDistrict2012 <- aggregate(votes ~ state + district, cd2012, sum)
+totalVoteByDistrict2012 <- totalVoteByDistrict2012[order(totalVoteByDistrict2012$state,totalVoteByDistrict2012$district),]
+# add threshold of simple majority based on each district's vote total
+totalVoteByDistrict2012$simpleMajority <- round(totalVoteByDistrict2012$votes/2 + 1,0)
+partyTotalsByDistrict2012 <- aggregate(votes ~ state + district + parties, cd2012, sum)
+partyTotalsByDistrict2012 <- partyTotalsByDistrict2012[order(partyTotalsByDistrict2012$state,partyTotalsByDistrict2012$district),]
+partyTotalsByDistrict2012 <- join(partyTotalsByDistrict2012,totalVoteByDistrict2012,by=c("state","district"),type="left")
+colnames(partyTotalsByDistrict2012)[5] <- "totalVote"
+partyTotalsByDistrict2012 <- partyTotalsByDistrict2012[,c(1,2,5,6,4,3)]
+partyTotalsByDistrict2012$pctVote <- partyTotalsByDistrict2012$votes/partyTotalsByDistrict2012$totalVote
+
+allStates <- unique(partyTotalsByDistrict2012$state)
+allDistricts <- unique(partyTotalsByDistrict2012$district)
+partyTotalsByDistrict2012$win <- 0 #create column to indicate wins
+
+for (i in 1:length(allDistricts)){
+  for (j in 1:length(allStates)){
+    row_to_find <- data.frame(state=allStates[j], district=allDistricts[i])
+    if(nrow(merge(row_to_find,partyTotalsByDistrict2012))>0){
+      subFrame <- subset(partyTotalsByDistrict2012,state==allStates[j] & district==allDistricts[i])
+      w <- which.max(subFrame$pctVote)
+      partyTotalsByDistrict2012[partyTotalsByDistrict2012$state==allStates[j] & 
+      partyTotalsByDistrict2012$district==allDistricts[i],]$win[w] <- 1
+    }
+  }
+}
+partyTotalsByDistrict2012$wastedVote <- 0
+partyTotalsByDistrict2012$wastedVote <- ifelse(partyTotalsByDistrict2012$win == 1 & 
+                                     partyTotalsByDistrict2012$votes > partyTotalsByDistrict2012$simpleMajority,
+                                   partyTotalsByDistrict2012$votes - partyTotalsByDistrict2012$simpleMajority,
+                                   ifelse(partyTotalsByDistrict2012$win == 1,0,partyTotalsByDistrict2012$votes))
+seatsWon2012 <- aggregate(win ~ parties,partyTotalsByDistrict2012,sum)
+seatsWon2012 <- subset(seatsWon2012,win!=0)
+seatsWonByState2012 <- aggregate(win ~ state + parties,partyTotalsByDistrict2012,sum)
+seatsWonByState2012 <- subset(seatsWonByState2012,win!=0)
+seatsWonByState2012 <- seatsWonByState2012[order(seatsWonByState2012$state,-seatsWonByState2012$win),]
+totalWastedVoteByParty2012 <- aggregate(wastedVote ~ parties, partyTotalsByDistrict2012, sum)
+totalWastedVoteByParty2012 <- totalWastedVoteByParty2012[order(-totalWastedVoteByParty2012$wastedVote),]
+totalVoteByParty2012 <- aggregate(votes ~ parties, partyTotalsByDistrict2012, sum)
+totalVoteByParty2012 <- totalVoteByParty2012[order(-totalVoteByParty2012$votes),]
+numDistricts <- data.frame(table(totalVoteByDistrict2012$state))
+colnames(numDistricts) <- c("state","number")
+numDistricts[9,2] <- 27 # correct, missing two from redistricting
+totalWastedVoteByPartyByState2012 <- aggregate(wastedVote ~ state + parties, partyTotalsByDistrict2012, sum)
+totalVoteByPartyByState2012 <- aggregate(votes ~ state + parties, partyTotalsByDistrict2012, sum)
+totalVoteByPartyByState2012 <- totalVoteByPartyByState2012[order(totalVoteByPartyByState2012$state,-totalVoteByPartyByState2012$votes),]
+totalWastedVoteByPartyByState2012 <- totalWastedVoteByPartyByState2012[order(totalWastedVoteByPartyByState2012$state,-totalWastedVoteByPartyByState2012$wastedVote),]
+stateData2012 <- subset(totalWastedVoteByPartyByState2012,parties=="Democratic" | totalWastedVoteByPartyByState2012$parties=="Republican")
+stateData2012 <- dcast(stateData2012,state ~ parties,value.var="wastedVote")
+# bind number districts and total vote
+stateData2012 <- join(stateData2012,numDistricts,by="state",type="left")
+stateData2012 <- join(stateData2012,totalVoteByState2012,by="state",type="left")
+stateData2012$efficiency.gap <- abs(stateData2012$Democratic-stateData2012$Republican)/stateData2012$votes
+stateData2012$seats.misapportioned <- stateData2012$efficiency.gap*stateData2012$number
+colnames(stateData2012)[2:5] <- c("w.votes.D","w.votes.R","seats","total.votes")
+stateData2012$adv.R <- 0 
+stateData2012$adv.D <- 0
+
+for (i in 1:nrow(stateData2012)){
+  if (stateData2012$w.votes.D[i] < stateData2012$w.votes.R[i]){
+    stateData2012$adv.D[i] <- stateData2012$seats.misapportioned[i]
+  }
+  else if (stateData2012$w.votes.R[i] < stateData2012$w.votes.D[i]){
+    stateData2012$adv.R[i] <- stateData2012$seats.misapportioned[i]
+  }
+}
+totalVoteByPartyByState2012 <- subset(totalVoteByPartyByState2012,parties=="Democratic" | totalVoteByPartyByState2012$parties=="Republican")
+totalVoteByPartyByState2012 <- dcast(totalVoteByPartyByState2012,state ~ parties,value.var="votes")
+colnames(totalVoteByPartyByState2012)[2:3] <- c("d.votes","r.votes")
+stateData2012 <- join(stateData2012,totalVoteByPartyByState2012,by="state",type="left")
+# calculate projected seats
+stateData2012$proj.D.seats <- (stateData2012$d.votes/stateData2012$total.votes)*stateData2012$seats
+stateData2012$proj.R.seats <- (stateData2012$r.votes/stateData2012$total.votes)*stateData2012$seats
+display <- stateData2012
+seatsWonByState2012 <- dcast(seatsWonByState2012,state ~ parties,value.var="win",fill="0")
+seatsWonByState2012$Democratic <- as.numeric(as.character(seatsWonByState2012$Democratic))
+seatsWonByState2012$Republican <- as.numeric(as.character(seatsWonByState2012$Republican))
+colnames(seatsWonByState2012)[2:3] <- c("act.D.seats","act.R.seats")
+stateData2012 <- join(stateData2012,seatsWonByState2012,by="state",type="left")
+stateData2012$voteratio <- ifelse(stateData2012$r.votes<stateData2012$d.votes,
+                          stateData2012$r.votes/stateData2012$d.votes,
+                          stateData2012$d.votes/stateData2012$r.votes)
+stateData2012$majority <- ifelse(stateData2012$r.votes>stateData2012$d.votes,"R","D")
+
+# efficiency gap by district
+districtData2012 <- dcast(partyTotalsByDistrict2012,state + district + totalVote ~ parties,value.var="wastedVote",fill=0)
+districtData2012$efficiency.gap <- abs(districtData2012$Democratic-districtData2012$Republican)/districtData2012$totalVote
+districtData2012 <- districtData2012[,c("state","district","totalVote","Republican","Democratic","efficiency.gap")]
+colnames(districtData2012)[4:5] <- c("w.votes.R","w.votes.D")
+allPartyDistrictTotals2012 <- dcast(partyTotalsByDistrict2012,state + district ~ parties,value.var="votes",fill=0)
+twoPartyDistrictTotals2012 <- allPartyDistrictTotals2012[,c("state","district","Republican","Democratic")]
+colnames(twoPartyDistrictTotals2012)[3:4] <- c("votes.R","votes.D")
+twoPartyDistrictTotals2012$vote.ratio <- ifelse(twoPartyDistrictTotals2012$votes.R<twoPartyDistrictTotals2012$votes.D,
+                                                twoPartyDistrictTotals2012$votes.R/twoPartyDistrictTotals2012$votes.D,
+                                                twoPartyDistrictTotals2012$votes.D/twoPartyDistrictTotals2012$votes.R)
+districtData2012 <- join(districtData2012,twoPartyDistrictTotals2012,by=c("state","district"),type="left")
+districtData2012$majority <- ifelse(districtData2012$votes.R>districtData2012$votes.D,"R","D")
+districtData2012$margin <- (abs(districtData2012$votes.R-districtData2012$votes.D)/districtData2012$totalVote)*100
+districtData2012$adv.R <- 0 
+districtData2012$adv.D <- 0
+for (i in 1:nrow(districtData2012)){
+  if (districtData2012$w.votes.D[i] < districtData2012$w.votes.R[i]){
+    districtData2012$adv.D[i] <- districtData2012$efficiency.gap[i]
+  }
+  else if (districtData2012$w.votes.R[i] < districtData2012$w.votes.D[i]){
+    districtData2012$adv.R[i] <- districtData2012$efficiency.gap[i]
+  }
+}
+sumAdv2012 <- aggregate(cbind(adv.R, adv.D) ~ state,districtData2012,sum)
+sumAdv2012$state.seat.favor <- ifelse(sumAdv2012$adv.R>sumAdv2012$adv.D,"R","D")
+sumAdv2012$state.seats.misapportioned <- abs(sumAdv2012$adv.R-sumAdv2012$adv.D)
+sumAdv2012 <- sumAdv2012[,c(1,4,5)]
+districtData2012 <- join(districtData2012,sumAdv2012,by="state",type="left")
+```
+
+### Introduction
+
+The practice of gerrymandering has long cast a shadow over electoral politics in the United States. The US Constitution relegates the power to draw the boundaries of the districts for the House of Representatives to the states, and in most cases – 42, to be precise – this falls primarily to the state legislator. With the ability to shift geographical lines between their state’s federal congressional districts, these legislators have enormous power to entrench their party’s political base, diminish their opposition, and effectively disenfranchise minority votes.
+
+Identifying extreme cases of gerrymandering is not difficult. Most casual observers could look at a map and quickly identify North Carolina’s 12th or Illinois’s 4th congressional district as long, narrow, meandering attempts to influence demographic representation. Both are cases of packing ethnic minorities into districts where they wield the majority, thereby decreasing their influence in other districts. This tactic, referred to as packing, can be employed alone or in conjunction with cracking, where a demographic or partisan minority is spread among all of the congressional districts, guaranteeing victories for the majority in every district, but also maintaining a thin margin of victory that puts those seats at risk with smaller changes in voter behavior. As an example: Party A holds a 55% majority across a state apportioned 5 districts. Party B holds 45% of the vote. Party A can divide the districts uniformly so they win all five seats by a ten-point margin. This guarantees them all of the seats, but puts each of the congressional representatives in somewhat competitive seats. Alternatively, they can pack as many Party B voters into one congressional district, guaranteeing party B one safe, non-competitive seat and Party A the other 4. Both outcomes are less equitable than a system of guaranteed proportional representation, where the minority party would hold 2 of the 5 seats.
+
+### Measures of Geometric Compactness
+
+Despite the influence gerrymandering has had on the political system, there are few measures that accurately capture the extent to which it diminishes partisan competition and representation of particular demographics. Common methods of measuring gerrymandering use a district’s geometric compactness as a proxy. A brief overview of how these methods measure the irregularity of a district:
+
+*Polsby-Popper Method*: The ratio of the district’s area to the area of a circle with the same perimeter. A district can range from 0 to 1, with lower values indicating lesser compactness and greater gerrymandering. 
+
+*Reock Test*: Similar to the Polsby-Popper method, the Reock test measures compactness by the ratio of a district area to the area of the smallest circle that can completely enclose the district geometrically.
+
+*Convex Hull*: Compares the area of a district to the area of the smallest convex polygon that can enclose it.
+
+*Schwartzberg*: Similar to the Polsby-Popper method, the Schwartzberg measure takes the ratio of the perimeter of a district to the area of a circle with the same perimeter.  
+
+These methods can be useful indicators of gerrymandering in some cases, but there are significant drawbacks to measures of geometric compactness. One is that the shapes of states are highly irregular and that the Article 1, Section 2 of the U.S. Constitution requires that states create districts with roughly equal population [Wesberry v. Sanders, 1964](https://scholar.google.com/scholar_case?case=6357954371173516293).  Given urban and rural settlement patterns, it is easy to see how irregular districts arise when optimizing for population distribution and geometric compactness. If we try to divide Idaho’s two congressional districts evenly between its population and also optimize for the geometric compactness of the two, we see that there’s probably no ideal solution. In some geometric patterns, it also may not be possible to increase the compactness of one district without decreasing the compactness of the adjacent district. Optimizing for all of these constraints doesn’t always provide a neat solution, so the results may not be indicative of gerrymandering. 
+	      
+Two of these measures, Polsby Popper and Schwartzberg, are very sensitive to the perimeter of a district, even when borders are affected by natural boundaries, such as rivers, mountain ranges, and coastlines. The coastal districts in Maryland, Virginia, and North Carolina register very high on these indices. These measures fail to help us understand gerrymandering patterns within a state. Does the difference in geometric density between the neat polygons of Western Massachusetts and Cape Cod reveal partisan gerrymandering or is it simply an accident of geography? And how do we account for differences between the shapes of the Plains States and those on the Atlantic Coast? These indices can be of some help in identifying egregious cases of partisan meddling - North Carolina’s 12th district - but there’s been little effort to correct for the likelihood of misclassification. Overall, these methods fail to explain patterns within a state as well as account for geometric differences between states.
+
+### Measures of Partisan Asymmetry
+
+A greater flaw to the general approach of compactness measures is that they do not serve as indicators of misapportionment across demographics and party lines and therefore cannot be used in courts of law by plaintiffs who attempt to litigate the most egregious cases of gerrymandering. In a University of Chicago Law Review Article published in 2014, Nicholas Stephanopoulos & Eric McGhee posit that the Supreme Court may consider measures of partisan intent in assessing the constitutionality of some gerrymandering.  They suggest measuring gerrymandering by calculating an efficiency gap for a given state’s congressional districts. The efficiency gap is measured by the difference in each party’s wasted votes – those votes in excess of the simple majority in districts they won and all of the votes in districts that they lost. The gap is then measured by the difference in the two parties’ wasted votes in the state and divided by the total number of voters.  Stephanopoulos provides an example in an article he wrote in *The New Republic*:
+
+> Suppose, for example, that a state has five districts with 100 voters each, and two parties, Party A and Party
+> B. Suppose also that Party A wins four of the seats 53 to 47, and Party B wins one of them 85 to 15. Then in
+> each of the four seats that Party A wins, it has 2 surplus votes (53 minus the 51 needed to win), and Party B
+> has 47 lost votes. And in the lone district that Party A loses, it has 15 lost votes, and Party B has 34
+> surplus votes (85 minus the 51 needed to win). In sum, Party A wastes 23 votes and Party B wastes 222 votes.
+> Subtracting one figure from the other and dividing by the 500 votes cast produces an efficiency gap of 40% in
+> Party A’s favor.
+
+Stephanopoulos and McGhee extend this measure to calculate the number of misapportioned congressional seats in a state by taking the product of the efficiency gap and the number of districts, with the belief that that courts should then hold states’ districting to a maximum of two misapportioned seats. This approach provides a consistent metric for identify partisan gerrymandering within states, and aggregating the effect of misapportionment on the state and national level. There are, however, some limitations in the approach:
+
+1. It assumes a two-party model. While the Republican and Democratic Parties dominate nationally, there are some districts where independent candidates have garnered a significant portion of the vote. In the 2012 elections, the Green Party won 16% in AR-3 and Libertarian candidates won between 15-32% in AZ-7, KS-3, LA-4, LA-6, TX-17, and TX-19. Calculating the efficiency gap by taking the difference between two parties is straightforward for two parties, but the logic doesn’t extend for three or more parties.
+
+2. The efficiency gap does not explain uncontested districts. Since the measure calculates the difference in wasted votes, uncontested districts should only exist when the party in control of a state legislature wants to pack the minority party into an overwhelmingly safe district and waste very few votes of their own. It would be, in effect, a maximally efficient form of packing. The results for the 2012 election demonstrate that this isn’t the case: there were three uncontested Democratic seats in Democratic-held Massachusetts and four uncontested Republican seats in Republican-held Texas. There was also a mix of uncontested seats held by both Parties in both Florida and California. 
+
+### Defining a Metric for Misapportionment
+
+Arithmetically, the efficiency gap in a single district is the difference in the portion of a seat that the wasted votes should control if there was perfect partisan symmetry (where a vote for one party has equal power as a vote for another). 
+
+Here is an example of a district with the wasted votes for each party: 
+
+Party         |  Votes         | Wasted Votes
+------------- |  ------------- | -------------
+Republican    | 300            | 300
+Democratic    | 700            | 199
+
+Every Republican vote and each Democratic vote in excess of a simple majority is considered “wasted”. The efficiency gap in this district is the difference in wasted votes divided by the vote total: $(300-199)/1000=0.101$. We then consider this value of the efficiency gap as an advantage to the Democrats. It is the proportion of a seat they hold based on the asymmetric power of a Democratic vote over a Republican vote. If a state contained ten identical districts, then the Democrats would hold all ten seats and we would sum the advantages and determine that one seat (or more precisely, 1.01) is misapportioned towards the Democrats. This may counter our intuitive sense of fairness, since it seems Republicans should probably win three out of ten fairly drawn districts, but the point of identifying misapportionment in this way is to align methods with legal bases for combatting partisan gerrymandering. The system of apportionment isn’t designed to be perfectly proportional between parties, but to provide equal voting power to individuals. In our theoretical state where the Republicans are cracked into ten 70:30 minorities, we must also consider that the gerrymandering strategy dilutes the power of Democratic voters, who also lose a degree of influence in the voting process since their representatives have very safe majorities. This has effects on accountability and entrenchment, which are less tangible, but are captured by our measure of inefficiency. 
+
+My metric for misapportionment is an adaptation of the efficiency gap described above. I will use the same method to calculate the wasted vote for the two major parties in each district. Rather than aggregating the wasted vote by each party in each state in order to create a state-level efficiency gap, I will calculate the efficiency gap for each congressional district, and then sum these district gaps for each party in each state as “Advantage Republican” and “Advantage Democrat” and then calculate the difference between the two parties as seat misapportionment in favor of the majority party. Example:
+
+District      |  R Votes | D Votes | R Wasted Votes | D Wasted Votes | EG
+------------- |  ------  | ------- | -------------  | -------------  | -----
+1             | 450      | 550     | 450            | 49             | 0.401
+2             | 200      | 800     | 200            | 299            | 0.099
+3             | 750      | 250     | 249            | 250            | 0.001
+4             | 295      | 705     | 295            | 204            | 0.091
+5             | 300      | 700     | 300            | 199            | 0.101
+
+Here we have a state with 5 districts and 5,000 voters. Republicans have exactly 39.9% of the vote but hold only one of the five seats. In a proportional system, they would win seats. If we sum the efficiency gaps by district winners, the Republican advantage is 0.001 and the Democratic advantage is 0.692. By taking the difference, we get a misapportionment of 0.691 seats in favor of the Democrats. Given the nature of seats, we should round the misapportionment to the nearest whole number. If the seat misapportionment for a state is less than 0.5, we should consider zero seats to be misapportioned. In this case, we should round up and consider one seat to be misapportioned. This improves upon Stephanopoulos and McGhee's efficiency gap since it is more sensitive to seat misapportionment on the state level. If we summed the wasted votes by party for this example, we would get 1494 for the Republicans and 1001 for the Democrats. This would give us an Efficiency Gap $=(1494-1001)/5000=0.0986$ and a seat misapportionment $=0.0986\times 5 = 0.493$. We would fail to identify a misapportioned seat!
+
+I believe this strategy provides a clearer link to gerrymandering strategy, as the majority party in each state is attempting to maximize the difference in the two parties' advantages: they seek to maximize the inefficiency of their opponent’s votes while minimizing the inefficiency of their own. Looking at the table, it is easy to identify how the Democrats gerrymandered a seat in their favor. The Republicans are packed into the 3rd district where the efficiency gap is minimized and the Democrats cracked the rest of the district, gaining modest advantages in safe districts (2nd, 4th ,5th) and a significant gain in a competitive district (1st).
+
+In order to understand how the efficiency gap responds as a function of the vote ratio, I created a theoretical district with 101 voters and two parties and calculated the efficiency gap and vote ratio for every possible outcome. The vote ratio is simply the votes for minority party over the votes for the majority party. If the Republican party wins a district with a $0.5$ vote ratio, then they outnumber Democratic voters 2:1. The plot below shows that the vote ratio ranges from $0 \leq VR \leq 1$ and the efficiency gap ranges from $0 \leq EG \leq 0.5$. 
+
+```{r,echo=FALSE}
+sim <- data.frame(a=1:100,b=100:1)
+sim$wasted.b <- ifelse(sim$b>50,sim$b-50,sim$b)
+sim$wasted.a <- ifelse(sim$a>50,sim$a-50,sim$a)
+sim$margin <- abs(sim$a-sim$b)
+sim$vote.ratio <- ifelse(sim$a<sim$b,sim$a/sim$b,sim$b/sim$a)
+sim$efficiency.gap <- abs(sim$wasted.a-sim$wasted.b)/nrow(sim)
+# split at 0.34
+packed <- sim[sim$vote.ratio<0.34,]
+cracked <- sim[sim$vote.ratio>=0.34,]
+f1 <- lm(efficiency.gap~vote.ratio,packed)
+f2 <- lm(efficiency.gap~vote.ratio,cracked)
+ggplot(sim) + geom_point(aes(x=vote.ratio,y=efficiency.gap)) + ggtitle("Simulated Results")
+```
+
+The plot demonstrates an interesting piecewise linear function where the efficiency gap peaks at a vote ratio just above $0$ and decreases dramatically until it reaches a minimum at $0.34$. I split the simulated results at $VR = 0.34$ and fit a simple linear regression model to each subset of data, and returned fits each with $R^{2} = 0.99$. This gave us the function for our Efficiency Gap:
+
+$$Vote\:Ratio = VR$$
+$$
+Efficiency\:Gap =
+\begin{cases}
+0.484 - 1.51 \times VR, & 0 \leq VR < 0.34 \\
+-0.224 + 0.760 \times VR, & 0.34 \leq VR \leq 1
+\end{cases}
+$$
+
+The segment where $VR < 0.34$ can be seen as those districts that are “packed” – where the majority party wins by a margin greater than $2:1$.
+
+Near $VR = 0.34$, the efficiency gap is close to $0$, since the two parties waste about the same number of votes – there are about as many votes for the minority party as there are for the winning party in excess of a simple majority.
+
+When $VR \geq 0.34$, the efficiency gap increases consistently to its maximum value as the vote ratio approaches 1. We can consider these districts as “cracked”. This segment includes districts where the majority party has a comfortable vote ratio in their favor: $0.34 \leq VR \leq 0.8$. This ranges from a margin of victory of $33$ points to as few as $10$ points. The region $0.8 < VR \leq 1$ indicates a high efficiency gap, but the margin of victory is less than 10 points, so these districts are competitive and unlikely to be intentionally gerrymandered.
+
+The next plot shows the results for every district in the 2012 congressional elections that ran a Democratic and a Republican candidate. I split the results between the winning parties: 
+
+```{r,echo=FALSE}
+excUnopposed <- subset(districtData2012,vote.ratio>0) 
+# exclude districts where a candidate ran unpposed (with a major party challenger)
+ggplot() + 
+  geom_line(data=sim, aes(x=vote.ratio,y=efficiency.gap)) +
+  geom_point(data=excUnopposed, aes(x=vote.ratio,y=efficiency.gap,color=majority)) +
+  facet_grid(majority ~ .) + 
+  scale_colour_manual(values=c("blue","red")) + 
+  ggtitle("2012 Congressional Results by Party")
+```
+                          
+Here we see two interesting patterns: most districts, regardless of party, are on the “cracking” spectrum and there are very few Republican majority districts on the “packing” spectrum. There seems to be a hard cutoff at a $VR = 0.25$ for Republican districts, indicating that Republicans are far less likely to be packed into districts. Unfortunately, we cannot identify gerrymandering by simply seeing where a district falls along this function. An individual district may favor a party $2:1$ simply by nature of a state’s partisan divide. We can however identify gerrymandering by examining where a particular state’s districts fall along this function. If there is a clear partisan divide between low-efficiency and high-efficiency districts, we can ascertain whether a state is intentionally gerrymandered. In order to do so, we will examine the results of a few states over the course of several elections. A good indicator of whether a state might be gerrymandered is whether there is one or more seats misapportioned for the state as a whole. 
+
+### Data Acquisition
+
+The data I used to assess gerrymandering and misapportionment was compiled by *Time* Magazine. Thanks to their efforts, the results of the biennial congressional elections from 2004-2012 can be accessed as csv or json file on their [Github Repo](https://github.com/TimeMagazine/congressional-election-results/tree/master/data). The data required some scrubbing and manipulation to get consistent results. I chose to look at the results of the four elections from 2006-2012 in order to see how misapportionment changed over time in particular states. Since these elections bridge the decennial census, I expected there to be significant changes over this time period. For each of the elections, I tidied the results by party by grouping local affiliates of parties, or naming variations on the ballot to be simply "Democratic" or "Republican". For example, Minnesota's Demoratic-Farmer Labor party is the state affiliate of the US Democratic Party, and thus became "Democratic". There are also some states that allow "electoral fusion", so a candidate may be on the ballot for more than one party. Cases like the "Democratic, Working Families" and "Republican, Conservative" simply became "Democratic" and "Republican". I performed a number of aggregations on the data to derive totals for votes and wasted votes by district, state, and nation. I then calculated the efficiency gap and seat misapportionment on the state level using the approach outlined by Stephanopoulus and McGhee and compared it with my technique of assigning the efficiency gap in each district as the portion of a seat won by the majority party due to partisan asymmetry.
+
+We will compare these measures by looking at the 2012 election. As we see below, the statewide efficiency gap does not serve as a good indicator of gerrymandering since the size of a state's congressional delegation determines how many seats are effectively misapportioned. In this table, "effiency gap" and "misapportionment 1" are calculated by aggregating the effiency gap by state and multiply that gap by the number of seats. The column "misapportionment 2" is my measure of aggregating the effiency gap by party by state to derive the misapportionment/seat advantage for a particular party, marked as "advantage".
+
+```{r,echo=FALSE}
+display <- join(stateData2012[,c(1,6,7)],sumAdv2012,by="state",type="left")
+display[,c(2,3,5)] <- round(display[,c(2,3,5)],2)
+colnames(display)[2:5] <- c("efficiency gap","misapportionment 1","advantage","misapportionment 2")
+display <- display[,c(1,2,3,5,4)]
+kable(head(display,10))
+```
+
+Ranking these results by metric, we see that the two methods return similar results for the top 10 gerrymandered states, with some variation in ranking. My metric ranks gerrymandering in Texas considerably lower, landing California the tenth rank instead.
+
+```{r,echo=FALSE}
+display <- display[order(-display["misapportionment 1"]),]
+kable(head(display[,c(1,3)],10))
+```
+
+```{r,echo=FALSE}
+display <- display[order(-display["misapportionment 2"]),]
+kable(head(display[,c(1,5)],10))
+```
+
+To compare these metrics with the Schwartzberg and Polsby-Popper measures of geometric compactness, I used the shapefiles for congressional districts provided by the US Census Bureau. This allowed me to measure the perimeter and area for each district and evaluate the two compactness measures. Using the shapefiles for the 113th Congress, which followed the 2012 election, I calculated the Schwartzberg and Polsby-Popper values for each district and then calculated the average by state. Here we see ten least compact states by the Polsby-Popper measure are lead by Alaska, which has only one congressional seat and cannot be gerrymandered. The results are quite different. There are only four states on both lists and not in the same order: North Carolina, Virginia, Pennsylvania, and Ohio.
+
+```{r,echo=FALSE}
+temp <- tempfile()  # 110th & 111th Congressional District Shapefiles
+download.file("http://cdmaps.polisci.ucla.edu/shp/districts113.zip", #113 congress = 2012 election
+              temp)  # See http://www.census.gov/geo/www/cob/cd110.html#shp
+unzip(temp)
+shapeFile <- readShapeSpatial("districtShapes/districts113.shp")  # Load shapefile
+suppressMessages(mapObject <- fortify(shapeFile))  # Convert to a data.frame
+mapObject <- data.frame(mapObject, shapeFile@data[mapObject$id, ])
+
+### Calculate district area and perimeter length ###
+
+mapObject$piece <- as.character(mapObject$piece)
+mapObject$stateCD <- with(mapObject, paste(STATENAME, DISTRICT))
+mapObject$Area <- mapObject$Perimeter <- NA
+uniqueCDs <- sort(unique(mapObject$stateCD))
+
+for(cd in uniqueCDs){  
+  cdShape <- mapObject[mapObject$stateCD == cd, ]
+  cdPoly <- SpatialPolygons(list(Polygons(lapply(split(cdShape[, c("long", "lat")],
+                                                       cdShape$piece), Polygon), ID = "b")))
+  owinObject <- try(as(cdPoly, "owin"))  
+  if(class(owinObject) == "try-error"){next()}  
+  mapObject[mapObject$stateCD == cd, "Area"] <- area.owin(owinObject)
+  mapObject[mapObject$stateCD == cd, "Perimeter"] <- perimeter(owinObject)
+}
+
+mapObject$Schwartzberg <- with(mapObject, Perimeter / ((Perimeter^2)/(4*pi)))
+mapObject$Polsby.Popper <- with(mapObject, Area / ((Perimeter^2)/(4*pi)))
+
+eachPP <- aggregate(Polsby.Popper ~ STATENAME + DISTRICT,mapObject,mean)
+statePP <- aggregate(Polsby.Popper ~ STATENAME,eachPP,mean)
+kable(head(statePP[order(statePP$Polsby.Popper),],10))
+```
+
+The Schwartzberg measure is not only inconsistent with the seat misapportionment metric, it also differs considerably from Polsby-Popper. Of the top ten least compact states, only five are the same. Eliminating Alaska, the top five on ths Schwartzberg index are not in the top ten on the Polsby-Popper index. While they may be useful in identifying irregularly shaped districts, these results demonstrate that the compactness measures are very inconsistent and should not be used to identify states that may have been gerrymandered.
+
+```{r,echo=FALSE}
+eachSB <- aggregate(Schwartzberg ~ STATENAME + DISTRICT,mapObject,mean)
+stateSB <- aggregate(Schwartzberg ~ STATENAME,eachSB,mean)
+kable(head(stateSB[order(stateSB$Schwartzberg),],10))
+```
+
+### Evaluating State Patterns
+
+```{r,echo=FALSE}
+NC2006 <- subset(districtData2006,state=="NC" & vote.ratio>0)
+NC2008 <- subset(districtData2008,state=="NC" & vote.ratio>0)
+NC2010 <- subset(districtData2010,state=="NC" & vote.ratio>0)
+NC2012 <- subset(districtData2012,state=="NC" & vote.ratio>0)
+
+p1 = ggplot() + 
+  geom_line(data=sim, aes(x=vote.ratio,y=efficiency.gap)) +
+  geom_point(data=NC2006, aes(x=vote.ratio,y=efficiency.gap,color=majority)) + 
+  scale_colour_manual(values=c("blue","red")) +
+  ggtitle(paste("NC 2006 : +", round(NC2006$state.seats.misapportioned,1),"seats for",
+                ifelse(NC2006$adv.R>0,"R","D")))
+p2 = ggplot() + 
+  geom_line(data=sim, aes(x=vote.ratio,y=efficiency.gap)) +
+  geom_point(data=NC2008, aes(x=vote.ratio,y=efficiency.gap,color=majority)) + 
+  scale_colour_manual(values=c("blue","red")) +
+  ggtitle(paste("NC 2008 : +", round(NC2008$state.seats.misapportioned,1),"seats for",
+                ifelse(NC2008$adv.R>0,"R","D")))
+p3 = ggplot() + 
+  geom_line(data=sim, aes(x=vote.ratio,y=efficiency.gap)) +
+  geom_point(data=NC2010, aes(x=vote.ratio,y=efficiency.gap,color=majority)) + 
+  scale_colour_manual(values=c("blue","red")) +
+  ggtitle(paste("NC 2010 : +", round(NC2010$state.seats.misapportioned,1),"seats for",
+                ifelse(NC2010$adv.R>0,"R","D")))
+p4 = ggplot() + 
+  geom_line(data=sim, aes(x=vote.ratio,y=efficiency.gap)) +
+  geom_point(data=NC2012, aes(x=vote.ratio,y=efficiency.gap,color=majority)) + 
+  scale_colour_manual(values=c("blue","red")) +
+  ggtitle(paste("NC 2012 : +", round(NC2012$state.seats.misapportioned,1),"seats for",
+                ifelse(NC2012$adv.R>0,"R","D")))
+
+grid.arrange(p1, p2, p3, p4, ncol = 2, nrow=2)
+
+```
+
+
+Article Sources:
+
+[“Here’s how we can end Gerrymandering Once and for All”](https://newrepublic.com/article/118534/gerrymandering-efficiency-gap-better-way-measure-gerrymandering) by Nicholas Stephanopoulus
+
+[“Partisan Gerrymandering and the Efficiency Gap”](http://papers.ssrn.com/sol3/papers.cfm?abstract_id=2457468) by Nicholas Stephanopoulus and Erin McGhee
