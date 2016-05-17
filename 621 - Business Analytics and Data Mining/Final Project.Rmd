@@ -270,6 +270,8 @@ kable(df2)
 
 The coefficient for *AidPerCapita* was more intuitive, as it appeared to be a large negative number. We would expect the number of out of school children to decrease as foreign aid increases. The p-value for the *AidPerCapita* coefficient appeared to be significant, but the r-squared value for the model as whole was 0.018. Unfortunately, it does not seem like either of these predictors explain a significant amount of variance.
 
+\newpage
+
 $$ OutOfSchoolChildrenPrimaryAge = \beta_0 + AidPerCapita \times \beta_1 $$
 
 ```{r,echo=FALSE}
@@ -499,13 +501,16 @@ Now we inspected the variance in Internet Usage by country and year. We immediat
 
 tech_data = dplyr::arrange(tech_mod, country, year)
 
-print(xyplot(IT.NET.USER.P2 ~ year | country, data=tech_data,
-  scales=list(y=list(cex=.35),x=list(cex=.35)),
-  strip=strip.custom(par.strip.text=list(cex=.5)),
-  xlab='Year',
-  ylab='Internet Users/100 Ppl',
-  type='l')
-)
+#print(xyplot(IT.NET.USER.P2 ~ year | country, data=tech_low,
+ # scales=list(y=list(cex=.35),x=list(cex=.35)),
+  #strip=strip.custom(par.strip.text=list(cex=.5)),
+  #xlab='Year',
+  #ylab='Internet Users/100 Ppl',
+  #type='l')
+#)
+
+ggplot(tech_low, aes(x=year, y=IT.NET.USER.P2)) + geom_line() + 
+  facet_wrap( ~ country) + theme_tufte() + scale_x_continuous(breaks = c(2005,2010,2015))
 ```
 
 Then we estimate the “within” variance by fitting a simple regression:
@@ -529,7 +534,7 @@ We then plotted the relationship between *InternetUsers* and *GDPperCapita* by c
 
 ```{r,echo=FALSE}
 print(xyplot(IT.NET.USER.P2 ~ NY.GDP.PCAP.KD.ZG | country,
-data=tech_data,
+data=tech_low,
 panel=function(x,y,...){
 panel.xyplot(x,y,...)
 panel.lmline(x,y,...)},
