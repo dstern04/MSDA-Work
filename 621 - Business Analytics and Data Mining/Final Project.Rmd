@@ -4,6 +4,17 @@ author: "Charley Ferrari, Christina Taylor, David Stern"
 date: "May 10, 2016"
 output: pdf_document
 ---
+## Abstract
+Based on World Bank’s World Development Indicators, we sought regression models that can predict socio-economic development. We chose three categories of development metrics: health, education, and technology; the response variables are TB incidence, primary school enrollment, and internet users per 100 people. Missing data, non-linearity, serially correlated errors, multicollinearity and differences among countries challenged our familiar OLS models and variable selection techniques. To capture both the variance between subjects as well as the changes over time, we performed panel regression analysis with both random and fixed effects, as well as general least square fit. We tested the models and found that the country factor absorbed most of the variance; the errors are serially correlated. Including country fixed effects and GLS to correct for autocorrelation lead to a vast improvement in our model’s explanatory power. Our inconclusive conclusion is that there is no “one true model” that can predict world development, due to the inherent variance of countries and changes over time. We are much better off limiting our scope to specific countries and time frame, and perform regression on a case by case basis.
+
+## Key Words
+Panel regression, longitudinal data, random and fixed effects, serial correlation, heteroskedasticity
+
+## Literature review:
+
+Other research on related topics inspired our choice of predictors. Just like the authors of _Evaluating the Impact of Foreign Aid on Economic Growth: A Cross-Country Study_, we chose foreign aid as a predictor for growth. _Determinants of Enrollment in Primary Education: A Case Study of District Lahore_ also helped us focusing on indicators linked to enrollment in primary education decisions. Furthermore, we also corrected for serial correlated errors and limited our time frame as well as region. 
+
+Our main difference from the above research is our panel regression methodology. Contrary to the first research, we make no assumption that a predictor’s contribution to development is similar across one income group. Instead, we analyzed country fixed effects to explain the subject level variance. Unlike the second research, we built models that could apply to more than one specific location, using country as fixed effect estimator, dummy variable, or fitting different intercept/slopes. 
 
 ## Methodology
 
