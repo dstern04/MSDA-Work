@@ -428,7 +428,7 @@ This model was the best estimator of *OutOfSchoolChildrenPrimaryAge* among our m
 
 ## Example: Internet Usage 
 
-We were also interested in whether our observations regarding health and education indictors is also reflected in technology. We began by plotting the relationship between Internet Users per 100 people and GDP per capita. The straight line was fit by OLS. The curvy fit was produced by the lowess method. Evidently, the relationship is not linear.
+We were interested in whether our observations regarding health and education indictors are also reflected in technology. We began by plotting the relationship between Internet Users per 100 people and GDP per capita. We chose this predictor because of its highly available data points and intuitive association with technical development. We focused our attention on countries observed during 2005 - 2014. The straight line was fit by OLS. The curvy fit was produced by the lowess method. Evidently, the relationship is not linear.
 
 ```{r,echo=FALSE}
 data = WDI(country='all', indicator = c('IT.NET.USER.P2','SH.DYN.NMRT','SH.DYN.MORT','SH.DYN.MORT.FE','SH.DYN.MORT.MA','SP.DYN.LE00.FE.IN','SP.DYN.LE00.MA.IN','SP.DYN.LE00.IN','GB.XPD.RSDV.GD.ZS','SP.POP.SCIE.RD.P6','TX.VAL.TECH.MF.ZS','TX.VAL.TECH.CD','BX.GSR.CMCP.ZS','BM.GSR.CMCP.ZS','NY.GDP.PCAP.KD.ZG','NY.GDP.PCAP.PP.KD'), start = 2005, end=2015, extra = TRUE)
@@ -447,11 +447,13 @@ tech_mod = tech %>%
   filter(country %in% countries) %>%
   filter(region != 'Aggregates')
 
+tech_data = dplyr::arrange(tech_mod, country, year)
+
 tech_low = tech_mod %>% filter(income == 'Low income')
 
 #scatter plot; OLS and lowess line
 
-attach(tech_low)
+attach(tech_data)
 
 plot(IT.NET.USER.P2 ~ NY.GDP.PCAP.KD.ZG,xlab='GDP per Capita',ylab='Interet Users per 100')
 abline(lm(IT.NET.USER.P2 ~ NY.GDP.PCAP.KD.ZG), lty=2)
@@ -497,11 +499,8 @@ abline(lm(IT.NET.USER.P2 ~ NY.GDP.PCAP.KD.ZG,data=tech_data))
 Now we inspected the variance in Internet Usage by country and year. We immediately observe that overall internet usage grows overtime. There is significant variance between countries.
 
 ```{r,echo=FALSE}
-#gdp_change = gdp %>%
 
-tech_data = dplyr::arrange(tech_mod, country, year)
-
-#print(xyplot(IT.NET.USER.P2 ~ year | country, data=tech_low,
+#print(xyplot(IT.NET.USER.P2 ~ year | country, data=tech_data,
  # scales=list(y=list(cex=.35),x=list(cex=.35)),
   #strip=strip.custom(par.strip.text=list(cex=.5)),
   #xlab='Year',
@@ -509,7 +508,7 @@ tech_data = dplyr::arrange(tech_mod, country, year)
   #type='l')
 #)
 
-ggplot(tech_low, aes(x=year, y=IT.NET.USER.P2)) + geom_line() + 
+ggplot(tech_data, aes(x=year, y=IT.NET.USER.P2)) + geom_line() + 
   facet_wrap( ~ country) + theme_tufte() + scale_x_continuous(breaks = c(2005,2010,2015))
 ```
 
@@ -534,7 +533,7 @@ We then plotted the relationship between *InternetUsers* and *GDPperCapita* by c
 
 ```{r,echo=FALSE}
 print(xyplot(IT.NET.USER.P2 ~ NY.GDP.PCAP.KD.ZG | country,
-data=tech_low,
+data=tech_data,
 panel=function(x,y,...){
 panel.xyplot(x,y,...)
 panel.lmline(x,y,...)},
@@ -553,7 +552,7 @@ The ICC of country as a predictor for *GDPperCapita* tells us that that 20% of t
 
 ### OLS Regression
 
-We began with a simple OLS regression fit. *GDPperCapita* was significant in this model, but the result was quite odd: Increase in *GDPperCapita* decreases *InternetUsage*:
+We began with a simple OLS regression fit. *GDPperCapita* was significant in this model, but the result was oddly counterintuitive: Increase in *GDPperCapita* decreases *InternetUsage*:
 
 ```{r,echo=FALSE}
 test = lm(IT.NET.USER.P2 ~ NY.GDP.PCAP.KD.ZG, tech_data)
@@ -577,11 +576,12 @@ This model is also a poor fit with with an r-squared value of 0.04 relative to t
 
 ### LSDV Regression
 
-Considering the heterogeneity across countries, we next fit a Least Squares dummy variable model. Each component of the country factory is absorbing the effects particular to each country. The adjusted r-squared vastly improved, to 0.94 and *GDPperCapita* became more significant in this model.
+Considering the heterogeneity across countries, we next fit a Least Squares dummy variable model. Each component of the country factory is absorbing the effects particular to each country. The adjusted r-squared vastly improved, to 0.94 and *GDPperCapita* became more significant in this model. In exchange, the dummy variables consumed additional 169 degrees of freedom.
 
 ```{r,echo=FALSE}
 #LSDV model
 dum = lm(IT.NET.USER.P2 ~ NY.GDP.PCAP.KD.ZG + factor(country) - 1, data=tech_data)
+#summary(dum)
 ```
 
 ### Panel Regression
@@ -639,7 +639,7 @@ kable(df10)
 
 The Hausman test, however, lead us to reject that the fixed and random effects estimators are giving similar answers. The p-value is so small, 2.253e-06, that we would prefer the fixed effects over the random effects estimate. We also added time-fixed effect to the panel data. The significant increase in the r-squared Lagrange multiplier test to 0.59 indicates the time-fixed effects estimators are preferred.
 
-```{r,eval=FALSE,echo=FALSE}
+```{r, echo=FALSE}
 #random vs. fixed effects
 phtest(IT.NET.USER.P2 ~ NY.GDP.PCAP.KD.ZG, data = plm_data)
 #testing for time fixed effects
@@ -649,7 +649,7 @@ phtest(IT.NET.USER.P2 ~ NY.GDP.PCAP.KD.ZG, data = plm_data)
 
 To test for cross-sectional dependence, we examined if our time series had residuals across countries that are correlated and thus lead to biased results. We used the Breusch-Pagan test against heteroskedasticity and found that in this case, there is cross-sectional dependence.
 
-```{r,eval=FALSE,echo=FALSE}
+```{r, echo=FALSE}
 m_time = plm(IT.NET.USER.P2 ~ NY.GDP.PCAP.KD.ZG + factor(year), data=plm_data,model='within')
 pFtest(m_pl, m_time)
 ```
@@ -660,9 +660,9 @@ Last but not least, we tested for serial correlation. The p-value is so small th
 
 \textbf{Heterogeneity\:in\:intercept / slopes}
 
-Our experimentation earlier suggests that there is considerable heterogeneity in the country-level effects. We used the Breusch-Pagaon test for heteroscedasticity. The test had a very small p-value, indicating the presence of heteroscedasticity. We attempted a model in which intercepts and slopes vary across countries, assuming the effect of GDP is consistent across countries. The model fits better, with a separate slope and intercept to the data from each country The adjusted r-squared value was 0.87 with an F-statistic of 35.67.
+Our experimentation earlier suggests that there is considerable heterogeneity in the country-level effects. We used the Breusch-Pagaon test for heteroscedasticity. The test had a very small p-value, indicating the presence of heteroscedasticity. We attempted a model in which intercepts and slopes vary across countries, assuming the effect of GDP is consistent across countries. The model fits better, with a separate slope and intercept to the data from each country The adjusted r-squared value was 0.87 with an F-statistic of 35.67. The combination of country and GDP consumed additional 338 degrees of freedom. 
 
-```{r,eval=FALSE,echo=FALSE}
+```{r, echo=FALSE}
 m2 = lm(IT.NET.USER.P2~NY.GDP.PCAP.KD.ZG + factor(country),data=tech_data)
 m3 = lm(IT.NET.USER.P2 ~ NY.GDP.PCAP.KD.ZG*country, data = tech_data)
 bptest(m2, studentize=F)
@@ -670,7 +670,7 @@ bptest(m2, studentize=F)
 
 \textbf{PGLS Model}
 
-Once again, our tests for time fixed effects and auto correlation suggested the need for GLS. This returned a residual r-squared of 0.873
+Our tests for time fixed effects and auto correlation suggested the need for GLS. Our Panel GLS model returned an r-squared of 0.873. Although still significant, the effect for GDP greatly decreased compared to the Least Squares estimates. This is by far our most powerful explanatory model, balancing r-squared value and degrees of freedom. Meanwhile, our experimentation has shown that technology development trends, too, vary considerably across countries and time frames. There may not be "one model that fits all".  
 
 ```{r,echo=FALSE}
 m_pgls = pggls(IT.NET.USER.P2 ~ NY.GDP.PCAP.KD.ZG, data=plm_data, model='within')
