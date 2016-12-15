@@ -51,7 +51,7 @@ table(training$CHAS)
 
 pairs(training,col=training$MEDV)
 
-# Fit all predictors individually and plot error distributions
+# fit all predictors individually and plot error distributions
 
 fitList <- list()
 
@@ -61,7 +61,6 @@ for(i in 1:13){
 }
 
 # find best r-squared of single predictors
-# high value is fitList[[1]]
 
 for (i in 1:length(fitList)){
   print(c(names(fitList)[i],summary(fitList[[i]])$r.squared))
@@ -89,13 +88,15 @@ fit1 <- lm(MEDV~LSTAT,training) # best of 1
 fit2 <- lm(MEDV~LSTAT+RM,training) # best of 2
 fit3 <- lm(MEDV~LSTAT+RM+PTRATIO,training) # best of 3
 
+# compare models 
 summary(fit1)
 summary(fit2)
 summary(fit2)
-
-# compare models 
-
 anova(fit1,fit2,fit3,test="Chisq")
 AIC(fit1,fit2,fit3)
 BIC(fit1,fit2,fit3)
+  
+# accuracy test - Mean Absolute Error, Standard Error
+mean(abs(test_target-predict(fit3,test)))
+sd(abs(test_target-predict(fit3,test)))/sqrt(51)
 
