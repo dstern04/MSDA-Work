@@ -1,3 +1,5 @@
+# test 2
+
 # Euclidean Distance - simplest technique
 x1 <- rnorm(30)
 x2 <- rnorm(30)
